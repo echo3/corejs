@@ -1,0 +1,33 @@
+<table>
+
+<colgroup>
+<col width="20%"/>
+<col width="20%"/>
+<col width="80%"/>
+<colgroup>
+
+<tr>
+<th colspan="3">Layout Data Properties</th>
+</tr>
+<tr>
+<td colspan="3">These properties may be set on <code>layoutData</code> property values of immediate child components to describe 
+how the child should be rendered within the container.</td>
+</tr>
+
+#foreach ($property in $tagRender.getPropertyNames($classBlock))
+<tr>
+<td><code>$property.getName()</code></td>
+<td>
+#if ($property.getType())
+#if ($property.isCustomType())
+$property.getType()
+#else
+<code>$property.getType()</code>
+#end
+#end
+</td>
+<td>$property.getDescription()</td>
+</td>
+</tr>
+#end
+</table>

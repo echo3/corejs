@@ -1,0 +1,29 @@
+<table>
+
+<colgroup>
+<col width="20%"/>
+<col width="20%"/>
+<col width="80%"/>
+<colgroup>
+
+<tr>
+<th colspan="3">Component Properties</th>
+</tr>
+
+#foreach ($property in $tagRender.getPropertyNames($classBlock))
+<tr>
+<td><code>$property.getName()</code></td>
+<td>
+#if ($property.getType())
+#if ($property.isCustomType())
+$property.getType()
+#else
+<code>$property.getType()</code>
+#end
+#end
+</td>
+<td>$property.getDescription()</td>
+</td>
+</tr>
+#end
+</table>

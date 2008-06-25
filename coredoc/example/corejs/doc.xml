@@ -1,0 +1,9 @@
+<coredoc>
+ <title>CoreJS API Specification</title>
+
+ <modules>
+  <module>Core.js</module>
+  <module>Core.Web.js</module>
+ </modules>
+
+</coredoc>

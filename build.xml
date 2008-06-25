@@ -1,0 +1,70 @@
+<?xml version="1.0"?>
+
+<project name="Core.js" default="dist" basedir=".">
+
+    <property environment="env"/>
+    <property file="ant.properties"/>
+    
+    <patternset id="fileset.resources">
+        <include name="**/*properties"/>
+        <include name="**/*html"/>
+        <include name="**/*css"/>
+        <include name="**/*js"/>
+        <include name="**/*gif"/>
+        <include name="**/*jpg"/>
+        <include name="**/*png"/>
+        <include name="**/*xml"/>
+        <include name="**/*stylesheet"/>
+    </patternset>
+
+    <path id="coredoc.lib">
+        <fileset dir="${dir.coredoc.lib}">
+            <include name="*.jar"/>
+        </fileset>
+    </path>
+
+    <!-- Minimize -->
+    <target name="minimize" depends="clean" 
+            description="Removes all non-essential files, including Eclipse temporary/build output files">
+        <delete dir="${dir.temp}"/>
+    </target>
+    
+    <!-- Clean -->
+    <target name="clean"
+            description="Clears all generated files, including build directories, distributables, and documentation">
+        <delete dir="${dir.build}"/>
+        <delete dir="${dir.dist}"/>
+        <delete dir="${dir.release}"/>
+    </target>
+        
+    <target name="compile.coredoc">
+        <mkdir dir="${dir.build.coredoc}"/>
+        <javac srcdir="${dir.coredoc.src}" destdir="${dir.build.coredoc}" debug="${debug}" deprecation="yes">
+            <classpath refid="coredoc.lib"/>
+        </javac>
+        <copy todir="${dir.build.coredoc}">
+            <fileset dir="${dir.coredoc.src}">
+                <patternset refid="fileset.resources"/>
+            </fileset>
+        </copy>
+    </target>
+    
+    <target name="dist.coredoc" depends="clean,compile.coredoc">
+        <mkdir dir="${dir.dist.jar}"/>
+        <jar jarfile="${dir.dist.jar}/${jarfile.coredoc}" basedir="${dir.build.coredoc}">
+            <manifest>
+                <attribute name="Main-Class" value="nextapp.coredoc.CoreDoc"/>
+                <attribute name="Class-Path" value="lib/velocity-1.5.jar lib/commons-collections-3.2.jar lib/commons-lang-2.2.jar"/>
+            </manifest>
+        </jar>
+        <mkdir dir="${dir.dist.jar}/lib"/>
+        <copy todir="${dir.dist.jar}/lib">
+            <fileset dir="${dir.coredoc.lib}">
+                <include name="*.jar"/>
+            </fileset>
+        </copy>
+    </target>
+    
+    <target name="dist" depends="dist.coredoc"/>
+    
+</project>

@@ -1,0 +1,76 @@
+body { 
+    background-color: #FFFFFF;
+    font-family: verdana, arial, helvetica, sans-serif;
+    font-size: 10pt;
+}
+
+SPAN.Header-ContainerName {
+    font-weight: bold;
+    font-size: 110%;
+}
+
+SPAN.Header-Name {
+    font-weight: bold;
+    font-size: 150%;
+}
+
+TH     { background: #4f4f6f; color: white; } 
+TR     { background: #ffffff; color: #1f1f27; } 
+
+HR {
+    border-top: 1px solid #4f4f6f;
+    border-bottom: none;
+    height: 0px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+DIV.Header {
+    background: #4f4f6f; 
+    color: white;
+    font-size: 140%;
+    font-weight: bold;
+    padding: 3px 10px;
+    margin-bottom: 20px; 
+}
+
+SPAN.DetailPropertyName {
+    font-weight: bold;
+    font-size: 110%;
+}
+
+A {
+    color: #00004f;
+}
+
+A.PropertySummaryLink {
+    font-weight: bold;
+}
+
+A:visited {
+    color: #004f6f;
+}
+
+A:hover {
+    color: #4f0000;
+    background-color: #ffefaf;
+}
+
+PRE {
+    color: #005f00;
+}
+
+CODE {
+    color: #005f00;
+}
+
+TABLE {
+    width: 100%;
+    border: 1px solid #4f4f6f;
+    border-collapse: collapse;
+}
+
+TD {
+    border: 1px solid #4f4f6f;
+    padding: 3px 10px;
+}
