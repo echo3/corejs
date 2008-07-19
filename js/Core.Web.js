@@ -473,6 +473,8 @@ Core.Web.Env = {
             }
         } else if (this.BROWSER_OPERA) {
             this.NOT_SUPPORTED_RELATIVE_COLUMN_WIDTHS = true;
+        } else if (this.BROWSER_SAFARI) {
+            this.QUIRK_SAFARI_DOM_TEXT_ESCAPE = true;
         }
     },
     
@@ -576,7 +578,7 @@ Core.Web.Event = {
             }
         }
     },
-
+    
     /**
      * Next available sequentially assigned element identifier.
      * Elements are assigned unique identifiers to enable mapping between 
@@ -658,12 +660,13 @@ Core.Web.Event = {
      */
     _processEvent: function(e) {
         e = e ? e : window.event;
+
         if (!e.target && e.srcElement) {
             // The Internet Explorer event model stores the target element in the 'srcElement' property of an event.
             // Modify the event such the target is retrievable using the W3C DOM Level 2 specified property 'target'.
             e.target = e.srcElement;
         }
-        
+
         // Establish array containing elements ancestry, with index 0 containing 
         // the element and the last index containing its most distant ancestor.  
         // Only record elements that have ids.
@@ -675,11 +678,11 @@ Core.Web.Event = {
             }
             targetElement = targetElement.parentNode;
         }
-    
+
         var listenerList;
-        
+
         var propagate = true;
-        
+
         // Fire event to capturing listeners.
         for (var i = elementAncestry.length - 1; i >= 0; --i) {
             listenerList = Core.Web.Event._capturingListenerMap.map[elementAncestry[i].__eventProcessorId];
@@ -693,7 +696,7 @@ Core.Web.Event = {
                 }
             }
         }
-        
+
         if (propagate) {
             // Fire event to bubbling listeners.
             for (var i = 0; i < elementAncestry.length; ++i) {
@@ -839,8 +842,28 @@ Core.Web.HttpConnection = Core.extend({
         this._url = url;
         this._contentType = contentType;
         this._method = method;
+        if (Core.Web.Env.QUIRK_SAFARI_DOM_TEXT_ESCAPE && messageObject instanceof Document) {
+            this._preprocessSafariDOM(messageObject.documentElement);
+        }
+        
         this._messageObject = messageObject;
         this._listenerList = new Core.ListenerList();
+    },
+    
+    _preprocessSafariDOM: function(node) {
+        if (node.nodeType == 3) {
+            var value = node.data;
+            value = value.replace(/&/g, "&amp;");
+            value = value.replace(/</g, "&lt;");
+            value = value.replace(/>/g, "&gt;");
+            node.data = value;
+        } else {
+            var child = node.firstChild;
+            while (child) {
+                this._preprocessSafariDOM(child);
+                child = child.nextSibling;
+            }
+        }
     },
     
     /**
