@@ -35,6 +35,15 @@ Echo.Sync.ListComponent = Core.extend(Echo.Render.ComponentSync, {
     _div: null,
     
     /**
+     * Rendered focus state of component, based on received DOM focus/blur events.
+     */
+    _focused: false,
+    
+    _processBlur: function(e) {
+        this._focused = false;
+    },
+    
+    /**
      * Processes a click event.
      * This event handler is registered only in the case of the "alternate" DHTML-based rendered
      * listbox for IE6, i.e., the _alternateRender flag will be true. 
@@ -43,7 +52,7 @@ Echo.Sync.ListComponent = Core.extend(Echo.Render.ComponentSync, {
         if (!this.client.verifyInput(this.component)) {
             Core.Web.DOM.preventEventDefault(e);
             this._renderSelection();
-            return;
+            return true;
         }
         
         var child = this._div.firstChild;
@@ -64,6 +73,8 @@ Echo.Sync.ListComponent = Core.extend(Echo.Render.ComponentSync, {
             var selection = this._getSelection();
             if (selection == null) {
                 selection = [];
+            } else if (typeof (selection) == "number") {
+                selection = [selection];
             }
             var arrayIndex = Core.Arrays.indexOf(selection, i); 
             if (arrayIndex == -1) {
@@ -89,7 +100,7 @@ Echo.Sync.ListComponent = Core.extend(Echo.Render.ComponentSync, {
         if (!this.client.verifyInput(this.component)) {
             Core.Web.DOM.preventEventDefault(e);
             this._renderSelection();
-            return;
+            return false;
         }
         
         var selection;
@@ -108,6 +119,14 @@ Echo.Sync.ListComponent = Core.extend(Echo.Render.ComponentSync, {
     
         this._setSelection(selection);
         this.component.doAction();
+    },
+    
+    _processFocus: function(e) {
+        this._focused = true;
+        if (!this.client.verifyInput(this.component, Echo.Client.FLAG_INPUT_PROPERTY)) {
+            return true;
+        }
+        this.component.application.setFocusedComponent(this.component);
     },
     
     /**
@@ -177,6 +196,8 @@ Echo.Sync.ListComponent = Core.extend(Echo.Render.ComponentSync, {
     
         if (this._enabled) {
             Core.Web.Event.add(this._element, "change", Core.method(this, this._processChange), false);
+            Core.Web.Event.add(this._element, "blur", Core.method(this, this._processBlur), false);
+            Core.Web.Event.add(this._element, "focus", Core.method(this, this._processFocus), false);
         }
 
         parentElement.appendChild(this._element);
@@ -242,6 +263,8 @@ Echo.Sync.ListComponent = Core.extend(Echo.Render.ComponentSync, {
         }
         
         if (this._enabled) {
+            Core.Web.Event.add(this._element, "blur", Core.method(this, this._processBlur), false);
+            Core.Web.Event.add(this._element, "focus", Core.method(this, this._processFocus), false);
             Core.Web.Event.add(this._div, "click", Core.method(this, this._processClick), false);
             Core.Web.Event.add(this._div, "selectstart", Core.method(this, this._processSelectStart), false);
         }
@@ -277,6 +300,15 @@ Echo.Sync.ListComponent = Core.extend(Echo.Render.ComponentSync, {
             Core.Web.Event.removeAll(this._div);
             this._div = null;
         }
+    },
+    
+    renderFocus: function() {
+        if (this._focused) {
+            return;
+        }
+        
+        this._focused = true;
+        Core.Web.DOM.focusElement(this._element);
     },
     
     _getSelection: function() {

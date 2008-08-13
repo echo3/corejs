@@ -7,15 +7,18 @@
 Echo.Sync.Button = Core.extend(Echo.Render.ComponentSync, {
 
     $static: {
+
+        _defaultIconTextMargin: 5,
+        
+        _prototypeButton: null,
+        
         _createPrototypeButton: function() {
             var div = document.createElement("div");
             div.tabIndex = "0";
             div.style.outlineStyle = "none";
             div.style.cursor = "pointer";
             return div;
-        },
-
-        _defaultIconTextMargin: 5
+        }
     },
     
     $load: function() {
@@ -23,11 +26,35 @@ Echo.Sync.Button = Core.extend(Echo.Render.ComponentSync, {
         Echo.Render.registerPeer("Button", this);
     },
     
-    _prototypeButton: null,
+    /**
+     * Outer DIV containing button.
+     */
+    _div: null,
     
+    /**
+     * Text-containing element, upon which font styles should be set.
+     */
+    _textElement: null,
+    
+    /**
+     * IMG element represnting buttons icon.
+     */
+    _iconImg: null,
+    
+    /**
+     * Method reference to _processRolloverExit.
+     */
     _processRolloverExitRef: null,
     
+    /**
+     * Method reference to _processInitEvent.
+     */
     _processInitEventRef: null,
+    
+    /**
+     * The rendered focus state of the button.
+     */
+    _focused: false,
     
     $construct: function() { 
         this._processInitEventRef = Core.method(this, this._processInitEvent);
@@ -83,10 +110,8 @@ Echo.Sync.Button = Core.extend(Echo.Render.ComponentSync, {
             var mouseEnterLeaveSupport = Core.Web.Env.PROPRIETARY_EVENT_MOUSE_ENTER_LEAVE_SUPPORTED;
             var enterEvent = mouseEnterLeaveSupport ? "mouseenter" : "mouseover";
             var exitEvent = mouseEnterLeaveSupport ? "mouseleave" : "mouseout";
-            Core.Web.Event.add(this._div, enterEvent, 
-                    Core.method(this, this._processRolloverEnter), false);
-            Core.Web.Event.add(this._div, exitEvent, 
-                    Core.method(this, this._processRolloverExit), false);
+            Core.Web.Event.add(this._div, enterEvent, Core.method(this, this._processRolloverEnter), false);
+            Core.Web.Event.add(this._div, exitEvent, Core.method(this, this._processRolloverExit), false);
         }
         if (this.component.render("pressedEnabled")) {
             Core.Web.Event.add(this._div, "mousedown", Core.method(this, this._processPress), false);
@@ -103,15 +128,12 @@ Echo.Sync.Button = Core.extend(Echo.Render.ComponentSync, {
     },
     
     _processBlur: function(e) {
-        if (!this.client.verifyInput(this.component)) {
-            return;
-        }
-        this._setFocusState(false);
+        this._renderFocusStyle(false);
     },
     
     _processClick: function(e) {
         if (!this.client.verifyInput(this.component)) {
-            return;
+            return true;
         }
         this.component.application.setFocusedComponent(this.component);
         this.doAction();
@@ -119,9 +141,9 @@ Echo.Sync.Button = Core.extend(Echo.Render.ComponentSync, {
     
     _processFocus: function(e) {
         if (!this.client.verifyInput(this.component)) {
-            return;
+            return true;
         }
-        this._setFocusState(true);
+        this.component.application.setFocusedComponent(this.component);
     },
     
     /**
@@ -157,7 +179,7 @@ Echo.Sync.Button = Core.extend(Echo.Render.ComponentSync, {
     
     _processPress: function(e) {
         if (!this.client.verifyInput(this.component)) {
-            return;
+            return true;
         }
         Core.Web.DOM.preventEventDefault(e);
         this._setPressedState(true);
@@ -165,14 +187,14 @@ Echo.Sync.Button = Core.extend(Echo.Render.ComponentSync, {
     
     _processRelease: function(e) {
         if (!this.client.verifyInput(this.component)) {
-            return;
+            return true;
         }
         this._setPressedState(false);
     },
     
     _processRolloverEnter: function(e) {
         if (!this.client.verifyInput(this.component) || Core.Web.dragInProgress) {
-            return;
+            return true;
         }
         this.component.application.addListener("focus", this._processRolloverExitRef);
         this._setRolloverState(true);
@@ -180,7 +202,7 @@ Echo.Sync.Button = Core.extend(Echo.Render.ComponentSync, {
     
     _processRolloverExit: function(e) {
         if (!this.client.verifyInput(this.component)) {
-            return;
+            return true;
         }
         if (this._processRolloverExitRef) {
             this.component.application.removeListener("focus", this._processRolloverExitRef);
@@ -198,7 +220,6 @@ Echo.Sync.Button = Core.extend(Echo.Render.ComponentSync, {
             Echo.Sync.Color.render(this.component.render("foreground"), this._div, "color");
             Echo.Sync.Color.render(this.component.render("background"), this._div, "backgroundColor");
             Echo.Sync.Border.render(this.component.render("border"), this._div);
-            Echo.Sync.Font.render(this.component.render("font"), this._div);
             Echo.Sync.FillImage.render(this.component.render("backgroundImage"), this._div);
         } else {
             Echo.Sync.Color.render(Echo.Sync.getEffectProperty(this.component, "foreground", "disabledForeground", true), 
@@ -206,8 +227,6 @@ Echo.Sync.Button = Core.extend(Echo.Render.ComponentSync, {
             Echo.Sync.Color.render(Echo.Sync.getEffectProperty(this.component, "background", "disabledBackground", true), 
                     this._div, "backgroundColor");
             Echo.Sync.Border.render(Echo.Sync.getEffectProperty(this.component, "border", "disabledBorder", true), 
-                    this._div);
-            Echo.Sync.Font.render(Echo.Sync.getEffectProperty(this.component, "font", "disabledFont", true), 
                     this._div);
             Echo.Sync.FillImage.render(Echo.Sync.getEffectProperty(this.component, 
                     "backgroundImage", "disabledBackgroundImage", true), this._div);
@@ -239,15 +258,22 @@ Echo.Sync.Button = Core.extend(Echo.Render.ComponentSync, {
             Core.Web.Event.add(this._div, "focus", this._processInitEventRef, false);
             Core.Web.Event.add(this._div, "mouseover", this._processInitEventRef, false);
         }
-    
+        
         parentElement.appendChild(this._div);
     },
     
     _renderButtonText: function(element, text) {
+        this._textElement = element;
         var textAlignment = this.component.render("textAlignment") 
         if (textAlignment) {
             Echo.Sync.Alignment.render(textAlignment, element, true, this.component);
         }
+        if (this._enabled) {
+            Echo.Sync.Font.render(this.component.render("font"), this._textElement);
+        } else {
+            Echo.Sync.Font.render(Echo.Sync.getEffectProperty(this.component, "font", "disabledFont", true), this._textElement);
+        }
+        
         element.appendChild(document.createTextNode(text));
         if (!this.component.render("lineWrap", true)) {
             element.style.whiteSpace = "nowrap";
@@ -269,13 +295,22 @@ Echo.Sync.Button = Core.extend(Echo.Render.ComponentSync, {
         if (this._processRolloverExitRef) {
             this.client.application.removeListener("focus", this._processRolloverExitRef);
         }
+
         Core.Web.Event.removeAll(this._div);
+        
+        this._focused = false;
+        this._div = null;
+        this._textElement = null;
         this._iconImg = null;
     },
 
     renderFocus: function() {
+        if (this._focused) {
+            return;
+        }
+
+        this._renderFocusStyle(true);
         Core.Web.DOM.focusElement(this._div);
-        this._setFocusState(true);
     },
     
     renderUpdate: function(update) {
@@ -287,7 +322,15 @@ Echo.Sync.Button = Core.extend(Echo.Render.ComponentSync, {
         return false; // Child elements not supported: safe to return false.
     },
     
-    _setFocusState: function(focusState) {
+    /**
+     * Enables/disables focused appearance of button.
+     */
+    _renderFocusStyle: function(focusState) {
+        if (this._focused == focusState) {
+            return;
+        }
+        this._focused = focusState;
+        
         if (!this.component.render("focusedEnabled")) {
             // Render default focus aesthetic.
             var background = this.component.render("background");
@@ -307,8 +350,10 @@ Echo.Sync.Button = Core.extend(Echo.Render.ComponentSync, {
             Echo.Sync.Color.renderClear(foreground, this._div, "color");
             Echo.Sync.Color.renderClear(background, this._div, "backgroundColor");
             Echo.Sync.FillImage.renderClear(backgroundImage, this._div, "backgroundColor");
-            Echo.Sync.Font.renderClear(font, this._div);
             Echo.Sync.Border.renderClear(border, this._div);
+            if (this._textElement) {
+                Echo.Sync.Font.renderClear(font, this._textElement);
+            }
         
             if (this._iconImg) {
                 var iconUrl = Echo.Sync.ImageReference.getUrl(
@@ -331,8 +376,10 @@ Echo.Sync.Button = Core.extend(Echo.Render.ComponentSync, {
         Echo.Sync.Color.renderClear(foreground, this._div, "color");
         Echo.Sync.Color.renderClear(background, this._div, "backgroundColor");
         Echo.Sync.FillImage.renderClear(backgroundImage, this._div, "backgroundColor");
-        Echo.Sync.Font.renderClear(font, this._div);
         Echo.Sync.Border.renderClear(border, this._div);
+        if (this._textElement) {
+            Echo.Sync.Font.renderClear(font, this._textElement);
+        }
         
         if (this._iconImg) {
             var iconUrl = Echo.Sync.ImageReference.getUrl(
@@ -354,8 +401,10 @@ Echo.Sync.Button = Core.extend(Echo.Render.ComponentSync, {
         Echo.Sync.Color.renderClear(foreground, this._div, "color");
         Echo.Sync.Color.renderClear(background, this._div, "backgroundColor");
         Echo.Sync.FillImage.renderClear(backgroundImage, this._div, "backgroundColor");
-        Echo.Sync.Font.renderClear(font, this._div);
         Echo.Sync.Border.renderClear(border, this._div);
+        if (this._textElement) {
+            Echo.Sync.Font.renderClear(font, this._textElement);
+        }
     
         if (this._iconImg) {
             var iconUrl = Echo.Sync.ImageReference.getUrl(
@@ -377,7 +426,6 @@ Echo.Sync.ToggleButton = Core.extend(Echo.Sync.Button, {
     },
     
     _selected: false,
-
     _stateElement: null,
     
     $abstract: {
@@ -393,12 +441,6 @@ Echo.Sync.ToggleButton = Core.extend(Echo.Sync.Button, {
         }
     },
     
-    renderAdd: function(update, parentElement) {
-        this._selected = this.component.render("selected");
-        
-        Echo.Sync.Button.prototype.renderAdd.call(this, update, parentElement);
-    },
-    
     getStateIcon: function() {
         var icon;
         if (this._selected) {
@@ -409,6 +451,12 @@ Echo.Sync.ToggleButton = Core.extend(Echo.Sync.Button, {
             icon = Echo.Sync.getEffectProperty(this.component, "stateIcon", "disabledStateIcon", !this._enabled);
         }
         return icon;
+    },
+    
+    renderAdd: function(update, parentElement) {
+        this._selected = this.component.render("selected");
+        
+        Echo.Sync.Button.prototype.renderAdd.call(this, update, parentElement);
     },
     
     renderContent: function() {
@@ -452,7 +500,7 @@ Echo.Sync.ToggleButton = Core.extend(Echo.Sync.Button, {
             var stateOrientation = Echo.Sync.TriCellTable.TRAILING_LEADING;
             var stateMargin = this.component.render("stateMargin", Echo.Sync.Button._defaultIconTextMargin);
             var tct = new Echo.Sync.TriCellTable(orientation, 
-                Echo.Sync.Extent.toPixels(margin), stateOrientation, Echo.Sync.Extent.toPixels(stateMargin));
+                    Echo.Sync.Extent.toPixels(margin), stateOrientation, Echo.Sync.Extent.toPixels(stateMargin));
             this._renderButtonText(tct.tdElements[0], text);
             this._iconImg = this._renderButtonIcon(tct.tdElements[1], icon);
             tct.tdElements[2].appendChild(this._stateElement);

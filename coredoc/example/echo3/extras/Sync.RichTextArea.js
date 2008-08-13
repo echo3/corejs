@@ -16,8 +16,8 @@ Extras.Sync.RichTextArea = Core.extend(Echo.Arc.ComponentSync, {
             "ColorDialog.Title.Background":     "Highlight Color",
             "ColorDialog.PromptForeground":     "Foreground:",
             "ColorDialog.PromptBackground":     "Background:",
-            "Error.ClipboardAccessDisabled":    "This browser has clipboard access disabled. "
-                                                + "Use keyboard shortcuts or change your security settings.",
+            "Error.ClipboardAccessDisabled":    "This browser has clipboard access disabled. " + 
+                                                "Use keyboard shortcuts or change your security settings.",
             "Generic.Cancel":                   "Cancel",
             "Generic.Error":                    "Error",
             "Generic.Ok":                       "Ok",
@@ -26,13 +26,11 @@ Extras.Sync.RichTextArea = Core.extend(Echo.Arc.ComponentSync, {
             "HyperlinkDialog.PromptDescription":
                                                 "Description Text:",
             "HyperlinkDialog.ErrorDialogTitle": "Cannot Insert Hyperlink",
-            "HyperlinkDialog.ErrorDialog.URL":  
-                                                "The URL entered is not valid.",
+            "HyperlinkDialog.ErrorDialog.URL":  "The URL entered is not valid.",
             "ImageDialog.Title":                "Insert Image",
             "ImageDialog.PromptURL":            "URL:",
             "ImageDialog.ErrorDialogTitle":     "Cannot Insert Image",
-            "ImageDialog.ErrorDialog.URL":  
-                                                "The URL entered is not valid.",
+            "ImageDialog.ErrorDialog.URL":      "The URL entered is not valid.",
             "Menu.Edit":                        "Edit",
             "Menu.Undo":                        "Undo",
             "Menu.Redo":                        "Redo",
@@ -79,13 +77,14 @@ Extras.Sync.RichTextArea = Core.extend(Echo.Arc.ComponentSync, {
             "TableDialog.PromptRows":           "Rows:",
             "TableDialog.PromptColumns":        "Columns:",
             "TableDialog.ErrorDialogTitle":     "Cannot Insert Table",
-            "TableDialog.ErrorDialog.Columns":  "The entered columns value is not valid.  "
-                                                + "Please specify a number between 1 and 50.",
+            "TableDialog.ErrorDialog.Columns":  "The entered columns value is not valid.  " +
+                                                "Please specify a number between 1 and 50.",
             "TableDialog.ErrorDialog.Rows":     "The entered rows value is not valid.  Please specify a number between 1 and 50."
         })
     },
     
     _processDialogCloseRef: null,
+    _processComponentInsertHtmlRef: null,
 
     $load: function() {
         Echo.Render.registerPeer("Extras.RichTextArea", this);
@@ -101,6 +100,73 @@ Extras.Sync.RichTextArea = Core.extend(Echo.Arc.ComponentSync, {
                 }
             }
             return icons;
+        },
+        
+        /**
+         * Event handler for user request (from menu/toolbar) to insert a hyperlink.
+         */
+        processInsertHyperlink: function(e) {
+            var hyperlinkDialog = new Extras.Sync.RichTextArea.HyperlinkDialog(this.component);
+            hyperlinkDialog.addListener("insertHyperlink", Core.method(this, function(e) {
+                this._richTextInput.peer._insertHtml("<a href=\"" + e.data.url + "\">"
+                        + (e.data.description ? e.data.description : e.data.url) + "</a>");
+                this.focusDocument();
+            }));
+            this._openDialog(hyperlinkDialog);
+        },
+        
+        /**
+         * Event handler for user request (from menu/toolbar) to insert an image.
+         */
+        processInsertImage: function(e) {
+            var imageDialog = new Extras.Sync.RichTextArea.ImageDialog(this.component);
+            imageDialog.addListener("insertImage", Core.method(this, function(e) {
+                this._richTextInput.peer._insertHtml("<img src=\"" + e.data.url + "\">");
+                this.focusDocument();
+            }));
+            this._openDialog(imageDialog);
+        },
+
+        /**
+         * Event handler for user request (from menu/toolbar) to insert a table.
+         */
+        processInsertTable: function(e) {
+            var tableDialog = new Extras.Sync.RichTextArea.TableDialog(this.component);
+            tableDialog.addListener("tableInsert", Core.method(this, function(e) {
+                this.insertTable(e.data.columns, e.data.rows);
+                this.focusDocument();
+            }));
+            this._openDialog(tableDialog);
+        },
+
+        /**
+         * Event handler for user request (from menu/toolbar) to set the background color.
+         */
+        processSetBackground: function(e) {
+            var colorDialog = new Extras.Sync.RichTextArea.ColorDialog(this.component, true);
+            colorDialog.addListener("colorSelect", Core.method(this, function(e) {
+                if (Core.Web.Env.BROWSER_INTERNET_EXPLORER) {
+                    Core.Web.Scheduler.run(Core.method(this, function() {
+                        this.execCommand("backcolor", e.data);
+                    }));
+                } else {
+                    this.execCommand("hilitecolor", e.data);
+                }
+                this.focusDocument();
+            }));
+            this._openDialog(colorDialog);
+        },
+        
+        /**
+         * Event handler for user request (from menu/toolbar) to set the foreground color.
+         */
+        processSetForeground: function(e) {
+            var colorDialog = new Extras.Sync.RichTextArea.ColorDialog(this.component, false);
+            colorDialog.addListener("colorSelect", Core.method(this, function(e) {
+                this.execCommand("forecolor", e.data);
+                this.focusDocument();
+            }));
+            this._openDialog(colorDialog);
         }
     },
     
@@ -117,18 +183,13 @@ Extras.Sync.RichTextArea = Core.extend(Echo.Arc.ComponentSync, {
     
     _trimHeight: null,
     
-    _reinitRunnable: null,
-    
     $construct: function() {
+        this._processComponentInsertHtmlRef = Core.method(this, this._processComponentInsertHtml);
         this._processDialogCloseRef = Core.method(this, this._processDialogClose);
-        if (Core.Web.Env.BROWSER_MOZILLA) {
-            this._reinitRunnable = new Core.Web.Scheduler.MethodRunnable( 
-                    Core.method(this, function() {
-                        if (this._richTextInput && this._richTextInput.peer) {
-                            this._richTextInput.peer._reinitListeners();    
-                        }
-                    }), 3000, true);    
-        }
+    },
+    
+    _addComponentListeners: function() {
+        this.component.addListener("insertHtml", this._processComponentInsertHtmlRef);
     },
 
     createComponent: function() {
@@ -435,11 +496,11 @@ Extras.Sync.RichTextArea = Core.extend(Echo.Arc.ComponentSync, {
             var row = new Echo.Row();
             if (features.foreground) {
                 row.add(this._createToolbarButton("FG", this._icons.foreground, this._msg["Menu.SetForeground"], 
-                        this._processSetForegroundDialog));
+                        this.processSetForeground));
             }
             if (features.background) {
                 row.add(this._createToolbarButton("BG", this._icons.background, this._msg["Menu.SetBackground"], 
-                        this._processSetBackgroundDialog));
+                        this.processSetBackground));
             }
             controlsRow.add(row);
         }
@@ -459,15 +520,15 @@ Extras.Sync.RichTextArea = Core.extend(Echo.Arc.ComponentSync, {
             }
             if (features.image) {
                 row.add(this._createToolbarButton("Image", this._icons.image, this._msg["Menu.InsertImage"], 
-                        this._processInsertImageDialog));
+                        this.processInsertImage));
             }
             if (features.hyperlink) {
                 row.add(this._createToolbarButton("Hyperlink", this._icons.hyperlink, this._msg["Menu.InsertHyperlink"], 
-                        this._processInsertHyperlinkDialog));
+                        this.processInsertHyperlink));
             }
             if (features.table) {
                 row.add(this._createToolbarButton("Table", this._icons.table, this._msg["Menu.InsertTable"], 
-                        this._processInsertTableDialog));
+                        this.processInsertTable));
             }
             controlsRow.add(row);
         }
@@ -489,12 +550,43 @@ Extras.Sync.RichTextArea = Core.extend(Echo.Arc.ComponentSync, {
         return button;
     },
     
+    execCommand: function(commandName, value) {
+        this._richTextInput.peer.execCommand(commandName, value);
+    },
+    
+    focusDocument: function() {
+        this._richTextInput.peer.focusDocument();
+    },
+    
     getDomainElement: function() { 
         return this._mainDivElement;
     },
     
+    insertHtml: function(html) {
+        this._richTextInput.peer._insertHtml(html);
+    },
+    
+    insertImage: function(url) {
+        this.insertHtml("<img src=\"" + url + "\">");
+    },
+    
+    insertTable: function(columns, rows) {
+        var rowHtml = "";
+        for (var i = 0; i < columns; ++i) {
+            rowHtml += "<td></td>";
+        }
+        rowHtml = "<tr>" + rowHtml + "</tr>";
+        var tableHtml = "<table width=\"100%\" border=\"1\" cellspacing=\"0\" cellpadding=\"1\"><tbody>";
+        for (var i = 0; i < rows; ++i) {
+            tableHtml += rowHtml;
+        }
+        tableHtml += "</tbody></table>";
+        this.insertHtml(tableHtml);
+    },
+    
     _processCommand: function(e) {
-        this._richTextInput.peer.doCommand(e.actionCommand);
+        this.execCommand(e.actionCommand);
+        this.focusDocument();
     },
     
     _openDialog: function(dialogWindow) {
@@ -517,6 +609,10 @@ Extras.Sync.RichTextArea = Core.extend(Echo.Arc.ComponentSync, {
         dialogWindow.addListener("parent", this._processDialogCloseRef);
     },
     
+    _processComponentInsertHtml: function(e) {
+        this._richTextInput.peer._insertHtml(e.html);
+    },
+    
     _processDialogClose: function(e) {
         if (e.newValue != null) {
             return;
@@ -536,34 +632,34 @@ Extras.Sync.RichTextArea = Core.extend(Echo.Arc.ComponentSync, {
         if (e.modelId.charAt(0) == '/') {
             var separatorIndex = e.modelId.indexOf("/", 1);
             if (separatorIndex == -1) {
-                this._richTextInput.peer.doCommand(e.modelId.substring(1));
+                this._richTextInput.peer.execCommand(e.modelId.substring(1));
             } else {
-                this._richTextInput.peer.doCommand(e.modelId.substring(1, separatorIndex),
+                this._richTextInput.peer.execCommand(e.modelId.substring(1, separatorIndex),
                         e.modelId.substring(separatorIndex + 1));
             }
         } else {
             switch (e.modelId) {
             case "foreground":
-                this._processSetForegroundDialog();
+                this.processSetForeground();
                 break;
             case "background":
-                this._processSetBackgroundDialog();
+                this.processSetBackground();
                 break;
             case "inserttable":
-                this._processInsertTableDialog();
+                this.processInsertTable();
                 break;
             case "inserthyperlink":
-                this._processInsertHyperlinkDialog();
+                this.processInsertHyperlink();
                 break;
             case "insertimage":
-                this._processInsertImageDialog();
+                this.processInsertImage();
                 break;
             case "cut":
             case "copy":
             case "paste":
             case "delete":
                 try {
-                    this._richTextInput.peer.doCommand(e.modelId);
+                    this._richTextInput.peer.execCommand(e.modelId);
                 } catch (ex) {
                     this._openDialog(new Extras.Sync.RichTextArea.MessageDialog(this.component,
                             this._msg["Generic.Error"], this._msg["Error.ClipboardAccessDisabled"])); 
@@ -572,90 +668,12 @@ Extras.Sync.RichTextArea = Core.extend(Echo.Arc.ComponentSync, {
         }
     },
     
-    /**
-     * Event handler for color selection events from background ColorDialog.
-     */
-    _processSetBackground: function(e) {
-        if (Core.Web.Env.BROWSER_INTERNET_EXPLORER) {
-            this._richTextInput.peer.doCommand("backcolor", e.data);
-        } else {
-            this._richTextInput.peer.doCommand("hilitecolor", e.data);
-        }
-    },
-    
-    /**
-     * Event handler for user request (from menu/toolbar) to set background color.
-     */
-    _processSetBackgroundDialog: function(e) {
-        var colorDialog = new Extras.Sync.RichTextArea.ColorDialog(this.component, true);
-        colorDialog.addListener("colorSelect", Core.method(this, this._processSetBackground));
-        this._openDialog(colorDialog);
-    },
-    
-    /**
-     * Event handler for color selection events from foreground ColorDialog.
-     */
-    _processSetForeground: function(e) {
-        this._richTextInput.peer.doCommand("forecolor", e.data);
-    },
-    
-    /**
-     * Event handler for user request (from menu/toolbar) to set foreground color.
-     */
-    _processSetForegroundDialog: function(e) {
-        var colorDialog = new Extras.Sync.RichTextArea.ColorDialog(this.component, false);
-        colorDialog.addListener("colorSelect", Core.method(this, this._processSetForeground));
-        this._openDialog(colorDialog);
-    },
-    
-    /**
-     * Event handler for table insert events from foreground TableDialog.
-     */
-    _processInsertTable: function(e) {
-        var rowHtml = "";
-        for (var i = 0; i < e.data.columns; ++i) {
-            rowHtml += "<td></td>";
-        }
-        rowHtml = "<tr>" + rowHtml + "</tr>";
-        var tableHtml = "<table width=\"100%\" border=\"1\" cellspacing=\"0\" cellpadding=\"1\"><tbody>";
-        for (var i = 0; i < e.data.rows; ++i) {
-            tableHtml += rowHtml;
-        }
-        tableHtml += "</tbody></table>";
-        this._richTextInput.peer._insertHtml(tableHtml);
-    },
-    
-    /**
-     * Event handler for user request (from menu/toolbar) to insert a table.
-     */
-    _processInsertTableDialog: function(e) {
-        var tableDialog = new Extras.Sync.RichTextArea.TableDialog(this.component);
-        tableDialog.addListener("tableInsert", Core.method(this, this._processInsertTable));
-        this._openDialog(tableDialog);
-    },
-    
-    _processInsertHyperlink: function(e) {
-        this._richTextInput.peer._insertHtml("<a href=\"" + e.data.url + "\">"
-                + (e.data.description ? e.data.description : e.data.url) + "</a>");
-    },
-    
-    _processInsertHyperlinkDialog: function(e) {
-        var hyperlinkDialog = new Extras.Sync.RichTextArea.HyperlinkDialog(this.component);
-        hyperlinkDialog.addListener("insertHyperlink", Core.method(this, this._processInsertHyperlink));
-        this._openDialog(hyperlinkDialog);
-    },
-    
-    _processInsertImage: function(e) {
-        this._richTextInput.peer._insertHtml("<img src=\"" + e.data.url + "\">");
-    },
-    
-    _processInsertImageDialog: function(e) {
-        var imageDialog = new Extras.Sync.RichTextArea.ImageDialog(this.component);
-        imageDialog.addListener("insertImage", Core.method(this, this._processInsertImage));
-        this._openDialog(imageDialog);
+    _removeComponentListeners: function() {
+        this.component.removeListener("insertHtml", this._processComponentInsertHtmlRef);
     },
     
     renderAdd: function(update, parentElement) {
+        this._addComponentListeners();
         this._msg = Extras.Sync.RichTextArea.resource.get(this.component.getRenderLocale());
 
         this._icons = this.getIcons();
@@ -675,17 +693,11 @@ Extras.Sync.RichTextArea = Core.extend(Echo.Arc.ComponentSync, {
             this._mainDivElement.style.height = "300px";
         }
         
-        if (this._reinitRunnable) {
-            Core.Web.Scheduler.add(this._reinitRunnable);
-        }
-        
         parentElement.appendChild(this._mainDivElement);
     },
     
     renderDispose: function(update) {
-        if (this._reinitRunnable) {
-            Core.Web.Scheduler.remove(this._reinitRunnable);
-        }
+        this._removeComponentListeners();
         Echo.Arc.ComponentSync.prototype.renderDispose.call(this, update);
         this._mainDivElement = null;
     },
@@ -728,6 +740,7 @@ Extras.Sync.RichTextArea.AbstractDialog = Core.extend(Echo.WindowPane, {
             iconInsets: "6px 10px",
             width: 280,
             height: 200,
+            modal: true,
             resizable: false,
             events: {
                 close: Core.method(this, this.processCancel)
@@ -797,23 +810,42 @@ Extras.Sync.RichTextArea.Html = {
     _P_STANDALONE_FIND: /<p\/?>/ig,
     _LEADING_WHITESPACE: /^(\s|<br\/?>|&nbsp;)+/i,
     _TRAILING_WHITESPACE: /(\s|<br\/?>|&nbsp;)+$/i,
+    _MSIE_INVALID_FONT_COLOR_REPL: /(<font .*?color\=)(#[0-9a-fA-F]{3,6})(.*?>)/ig,
+    _MSIE_INVALID_FONT_BACKGROUND_REPL: /(<font .*?)(background-color)/ig,
     
     /**
      * Cleans HTML input/output.
      */
     clean: function(html) {
-        Core.Debug.consoleWrite(" in: " + html);
         html = html.replace(Extras.Sync.RichTextArea.Html._P_BLOCK_FIND, "$1<br/>");
         html = html.replace(Extras.Sync.RichTextArea.Html._P_STANDALONE_FIND, "<br/>");
         html = html.replace(Extras.Sync.RichTextArea.Html._LEADING_WHITESPACE, "");
         html = html.replace(Extras.Sync.RichTextArea.Html._TRAILING_WHITESPACE, "");
-        Core.Debug.consoleWrite("out: " + html);
+        if (Core.Web.Env.BROWSER_INTERNET_EXPLORER) {
+            html = html.replace(Extras.Sync.RichTextArea.Html._MSIE_INVALID_FONT_COLOR_REPL, "$1\"$2\"$3");
+            html = html.replace(Extras.Sync.RichTextArea.Html._MSIE_INVALID_FONT_BACKGROUND_REPL, "$1background-color");
+        }
         return html;
     }
 };
 
 Extras.Sync.RichTextArea.ColorDialog = Core.extend(Extras.Sync.RichTextArea.AbstractDialog, {
 
+    $static: {
+        COLORS: [ 
+                "#fce94f", "#edd400", "#c4a000",
+                "#fcaf3e", "#f57900", "#e8b86e",
+                "#e9b96e", "#c17d11", "#8f5902",
+                "#8ae234", "#73d216", "#4e9a06",
+                "#729fcf", "#3465a4", "#204a87",
+                "#ad7fa8", "#75507b", "#5c3566",
+                "#ef2929", "#cc0000", "#a40000",
+                "#eeeeec", "#d3d7cf", "#babdb6",
+                "#888a85", "#555753", "#2e3436",
+                "#ffffff", "#7f7f7f", "#000000"
+        ]
+    },
+    
     $construct: function(richTextArea, setBackground) {
         Extras.Sync.RichTextArea.AbstractDialog.call(this, richTextArea,
                 Extras.Sync.RichTextArea.AbstractDialog.TYPE_OK_CANCEL, 
@@ -821,21 +853,52 @@ Extras.Sync.RichTextArea.ColorDialog = Core.extend(Extras.Sync.RichTextArea.Abst
                     title: richTextArea.peer._msg[setBackground ? 
                             "ColorDialog.Title.Background" : "ColorDialog.Title.Foreground"],
                     icon: setBackground ? richTextArea.peer._icons.background : richTextArea.peer._icons.foreground,
-                    width: 280,
+                    width: 400,
                     height: 320
                 },
-                new Echo.Column({
-                    insets: 10,
+                new Echo.Row({
+                    cellSpacing: 20,
                     children: [
-                        new Echo.Label({
-                            text: richTextArea.peer._msg[
-                                    setBackground ? "ColorDialog.PromptBackground" : "ColorDialog.PromptForeground"]
+                        new Echo.Column({
+                            insets: 10,
+                            children: [
+                                new Echo.Label({
+                                    text: richTextArea.peer._msg[
+                                            setBackground ? "ColorDialog.PromptBackground" : "ColorDialog.PromptForeground"]
+                                }),
+                                this._colorSelect = new Extras.ColorSelect({
+                                    displayValue: true
+                                })
+                            ]
                         }),
-                        this._colorSelect = new Extras.ColorSelect({
-                            displayValue: true
+                        new Echo.Grid({
+                            insets: 2,
+                            size: 3,
+                            children: this._createSwatches()
                         })
                     ]
                 }));
+    },
+    
+    _createSwatches: function() {
+        var children = [];
+        var COLORS = Extras.Sync.RichTextArea.ColorDialog.COLORS;
+        var actionListener = Core.method(this, function(e) {
+            this._colorSelect.set("color", e.actionCommand);
+        });
+        for (var i = 0; i < COLORS.length; ++i) {
+            children.push(new Echo.Button({
+                height: 16,
+                width: 32,
+                background: COLORS[i],
+                border: "1px outset " + COLORS[i],
+                actionCommand: COLORS[i],
+                events: {
+                    action: actionListener
+                }
+            }));
+        }
+        return children;
     },
     
     processOk: function(e) {
@@ -943,28 +1006,32 @@ Extras.Sync.RichTextArea.OverlayPane = Core.extend(Echo.Component, {
 
 Extras.Sync.RichTextArea.OverlayPanePeer = Core.extend(Echo.Render.ComponentSync, {
 
-    _bodyDiv: null,
+    _div: null,
 
     $load: function() {
         Echo.Render.registerPeer("Extras.RichTextOverlayPane", this);
     },
 
     renderAdd: function(update, parentElement) {
-        this._bodyDiv = document.createElement("div");
-        this._bodyDiv.style.cssText = "position:absolute;top:0;right:0;bottom:0;left:0;";
+        this._div = document.createElement("div");
+        this._div.style.cssText = "position:absolute;top:0;right:0;bottom:0;left:0;z-index:32767";
         if (this.component.children.length == 1) {
-            Echo.Render.renderComponentAdd(update, this.component.children[0], this._bodyDiv);
+            Echo.Render.renderComponentAdd(update, this.component.children[0], this._div);
         } else if (this.component.children.length > 1) {
             throw new Error("Too many children added to OverlayPane.");
         }
        
-        document.body.appendChild(this._bodyDiv);
+        document.body.appendChild(this._div);
     },
     
     renderDispose: function(update) {
-        if (this._bodyDiv && this._bodyDiv.parentNode) {
-            this._bodyDiv.parentNode.removeChild(this._bodyDiv);
+        if (this._div && this._div.parentNode) {
+            this._div.parentNode.removeChild(this._div);
         }
+    },
+    
+    renderDisplay: function(update) {
+        Core.Web.VirtualPosition.redraw(this._div);
     },
     
     renderUpdate: function(update) {
@@ -986,7 +1053,8 @@ Extras.Sync.RichTextArea.InputComponent = Core.extend(Echo.Component, {
         Echo.ComponentFactory.registerType("Extras.RichTextInput", this);
     },
     
-    componentType: "Extras.RichTextInput"
+    componentType: "Extras.RichTextInput",
+    focusable: true
 });
 
 Extras.Sync.RichTextArea.InputPeer = Core.extend(Echo.Render.ComponentSync, {
@@ -1004,13 +1072,21 @@ Extras.Sync.RichTextArea.InputPeer = Core.extend(Echo.Render.ComponentSync, {
     _fireAction: false,
     
     _renderedHtml: null,
-
-    $construct: function() { },
     
-    doCommand: function(command, value) {
+    _processPropertyRef: null,
+
+    $construct: function() { 
+        this._processPropertyRef = Core.method(this, this._processProperty);
+    },
+    
+    execCommand: function(commandName, value) {
         this._loadRange();
-        this._iframeElement.contentWindow.document.execCommand(command, false, value);
+        this._iframeElement.contentWindow.document.execCommand(commandName, false, value);
         this._storeData();
+    },
+    
+    focusDocument: function() {
+        this.component.application.setFocusedComponent(this.component);
     },
     
     _insertHtml: function(html) {
@@ -1021,8 +1097,9 @@ Extras.Sync.RichTextArea.InputPeer = Core.extend(Echo.Render.ComponentSync, {
             this._selectionRange.select();
             this._selectionRange.pasteHTML(html);
         } else {
-            this.doCommand("inserthtml", html);
+            this.execCommand("inserthtml", html);
         }
+        this.focusDocument();
     },
     
     _loadData: function() {
@@ -1039,6 +1116,8 @@ Extras.Sync.RichTextArea.InputPeer = Core.extend(Echo.Render.ComponentSync, {
         var contentDocument = this._iframeElement.contentWindow.document;
         contentDocument.body.innerHTML = html;
         this._renderedHtml = html;
+        //FIXME always grabbing focus, this may be undesired...necessary to maintain focus though.
+        this.renderFocus();
     },
     
     _loadRange: function() {
@@ -1046,6 +1125,12 @@ Extras.Sync.RichTextArea.InputPeer = Core.extend(Echo.Render.ComponentSync, {
             if (this._selectionRange) {
                 this._selectionRange.select();
             }
+        }
+    },
+    
+    _processProperty: function(e) {
+        if (e.propertyName == "text") {
+            this._loadData();
         }
     },
     
@@ -1091,19 +1176,9 @@ Extras.Sync.RichTextArea.InputPeer = Core.extend(Echo.Render.ComponentSync, {
         this._storeRange();
     },
     
-    _reinitListeners: function() {
-        Core.Web.Event.removeAll(this._iframeElement.contentWindow.document);
-        Core.Web.Event.add(this._iframeElement.contentWindow.document, "keypress", 
-                Core.method(this, this._processKeyPress), false);
-        Core.Web.Event.add(this._iframeElement.contentWindow.document, "keyup", 
-                Core.method(this, this._processKeyUp), false);
-        Core.Web.Event.add(this._iframeElement.contentWindow.document, "mousedown", 
-                Core.method(this, this._processMouseDown), false);
-        Core.Web.Event.add(this._iframeElement.contentWindow.document, "mouseup", 
-                Core.method(this, this._processMouseUp), false);
-    },
-    
     renderAdd: function(update, parentElement) {
+        this.component._richTextArea.addListener("property", this._processPropertyRef);
+        
         // Create IFRAME container DIV element.
         this._mainDivElement = document.createElement("div");
         Echo.Sync.Border.render(this.component._richTextArea.render("border", Extras.RichTextArea.DEFAULT_BORDER),
@@ -1140,25 +1215,39 @@ Extras.Sync.RichTextArea.InputPeer = Core.extend(Echo.Render.ComponentSync, {
             }
             element = element.parentNode;
         }
-    
+        
         var text = this.component._richTextArea.get("text");
         
         var contentDocument = this._iframeElement.contentWindow.document;
         
-        var bodyStyleAttribute = "";
+        var bodyStyleAttribute = "height:100%;width:100%;margin:0px;padding:0px;";
+        
         var foreground = this.component._richTextArea.render("foreground");
+        if (foreground) {
+            bodyStyleAttribute += "color:" + foreground + ";"
+        }
+
         var background = this.component._richTextArea.render("background");
-        if (foreground || background) {
-            if (foreground) {
-                bodyStyleAttribute += "color:" + foreground + ";"
+        if (background) {
+            bodyStyleAttribute += "background-color:" + background + ";"
+        }
+
+        var backgroundImage = this.component._richTextArea.render("backgroundImage");
+        if (backgroundImage) {
+            bodyStyleAttribute += "background-attachment: fixed;";
+            bodyStyleAttribute += "background-image:url(" + Echo.Sync.FillImage.getUrl(backgroundImage) + ");";
+            var backgroundRepeat = Echo.Sync.FillImage.getRepeat(backgroundImage);
+            if (backgroundRepeat) {
+                bodyStyleAttribute += "background-repeat:" + backgroundRepeat + ";";
             }
-            if (background) {
-                bodyStyleAttribute += "background-color:" + background + ";"
+            var backgroundPosition = Echo.Sync.FillImage.getPosition(backgroundImage);
+            if (backgroundPosition) {
+                bodyStyleAttribute += "background-position:" + backgroundPosition + ";";
             }
         }
         
         contentDocument.open();
-        contentDocument.write("<html><body"
+        contentDocument.write("<html><body tabindex=\"0\" width=\"100%\" height=\"100%\""
                 + (bodyStyleAttribute ? (" style=\"" + bodyStyleAttribute + "\"") : "")
                 + ">" + (text == null ? "" : text) + "</body></html>");
         contentDocument.close();
@@ -1171,6 +1260,7 @@ Extras.Sync.RichTextArea.InputPeer = Core.extend(Echo.Render.ComponentSync, {
         } else {
             contentDocument.designMode = "on";
         }
+        
         Core.Web.Event.add(this._iframeElement.contentWindow.document, "keypress", 
                 Core.method(this, this._processKeyPress), false);
         Core.Web.Event.add(this._iframeElement.contentWindow.document, "keyup", 
@@ -1183,6 +1273,7 @@ Extras.Sync.RichTextArea.InputPeer = Core.extend(Echo.Render.ComponentSync, {
     },
     
     renderDispose: function(update) {
+        this.component._richTextArea.removeListener("property", this._processPropertyRef);
         Core.Web.Event.removeAll(this._iframeElement.contentWindow.document);
         this._mainDivElement = null;
         this._iframeElement = null;
@@ -1194,7 +1285,7 @@ Extras.Sync.RichTextArea.InputPeer = Core.extend(Echo.Render.ComponentSync, {
         if (!this._contentDocumentRendered) {
             this._renderContentDocument();
         }
-        
+
         var rtaMainDivElement = this.component._richTextArea.peer._mainDivElement;
         var bounds = new Core.Web.Measure.Bounds(rtaMainDivElement.parentNode);
         
@@ -1204,6 +1295,25 @@ Extras.Sync.RichTextArea.InputPeer = Core.extend(Echo.Render.ComponentSync, {
             if (this._iframeElement.style.height != calculatedHeight) {
                 this._iframeElement.style.height = calculatedHeight; 
             }
+        }
+    },
+
+    renderFocus: function() {
+        if (Core.Web.Env.BROWSER_SAFARI) {
+            // Focus window first to avoid issue where Safari issue with updating content and then focusing.
+            window.focus();
+        }
+        Core.Web.DOM.focusElement(this._iframeElement.contentWindow);
+        if (Core.Web.Env.BROWSER_INTERNET_EXPLORER) {
+            // Force full screen redraw to avoid IE bug where screen mysteriously goes blank in IE.
+            Core.Web.Scheduler.run(Core.method(this, function() {
+                var value = document.documentElement.style.display;
+                if (!value) {
+                    value = "";
+                }
+                document.documentElement.style.display = "none";
+                document.documentElement.style.display = value;
+            }));
         }
     },
     
