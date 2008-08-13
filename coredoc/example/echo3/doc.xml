@@ -1,13 +1,13 @@
 <coredoc>
  <title>Echo3 JavaScript API Specification</title>
  
- <output-dir>/tmp/Echo3ClientAPI</output-dir>
+ <output-dir>Echo3ClientAPI</output-dir>
 
- <modules base="/home/tliebeck/work/echo3/src/client/corejs/">
+ <modules base="${base.echo}/src/client/corejs">
   <module>Core.js</module>
   <module>Core.Web.js</module>
  </modules>
- <modules base="/home/tliebeck/work/echo3/src/client/echo/">
+ <modules base="${base.echo}/src/client/echo">
   <module>Application.js</module>
   <module>Render.js</module>
   <module>Sync.js</module>
@@ -24,7 +24,7 @@
   <module>Sync.TextComponent.js</module>
   <module>Sync.WindowPane.js</module>
  </modules>
- <modules base="/home/tliebeck/work/echo3extras/src/client/extras/">
+ <modules base="${base.extras}/src/client/extras">
   <module>Extras.js</module>
   <module>Application.AccordionPane.js</module>
   <module>Application.BorderPane.js</module>

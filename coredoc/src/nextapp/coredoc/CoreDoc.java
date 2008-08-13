@@ -3,6 +3,8 @@ package nextapp.coredoc;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 import java.util.Properties;
 
 import org.apache.velocity.app.Velocity;
@@ -20,7 +22,27 @@ import nextapp.coredoc.util.StringUtil;
 
 public class CoreDoc {
     
+    private static final Pattern PROPERTY_PATTERN = Pattern.compile("\\$\\{([0-9a-zA-Z\\.]+)\\}");
+    
     private static Element docElement;
+    
+    private static String parseFileValue(String value) {
+         StringBuffer out = new StringBuffer();
+         int lastIndex = 0;
+         Matcher variableMatcher = PROPERTY_PATTERN.matcher(value);
+         while (variableMatcher.find()) {
+             out.append(value.substring(lastIndex, variableMatcher.start()));
+             lastIndex = variableMatcher.end();
+             String propertyName = variableMatcher.group(1);
+             String propertyValue = System.getProperty(propertyName);
+             if (propertyValue == null) {
+                 throw new IllegalArgumentException("No property value provided for required property: \"" + propertyName + "\".");
+             }
+             out.append(propertyValue);
+         }
+         out.append(value.substring(lastIndex));
+         return out.toString();
+    }
 
     public static void main(String[] args) 
     throws Exception {
@@ -63,16 +85,16 @@ public class CoreDoc {
             if (modulesElements[i].hasAttribute("base") ) {
                 //FIXME File.isAbsolute() always true, cannot find method in Java API to determine if path is relative or absolute.
                 // Test if relative file exists, if not, try absolute path.
-                baseFile = new File(defaultBaseFile, modulesElements[i].getAttribute("base"));
+                baseFile = new File(defaultBaseFile, parseFileValue(modulesElements[i].getAttribute("base")));
                 if (!baseFile.exists()) {
-                    baseFile = new File(modulesElements[i].getAttribute("base"));
+                    baseFile = new File(parseFileValue(modulesElements[i].getAttribute("base")));
                 }
             } else {
                 baseFile = defaultBaseFile;
             }
             Element moduleElements[] = DomUtil.getChildElementsByTagName(modulesElements[i], "module");
             for (int j = 0; j < moduleElements.length; ++j) {
-                String moduleName = DomUtil.getElementText(moduleElements[j]);
+                String moduleName = parseFileValue(DomUtil.getElementText(moduleElements[j]));
                 String moduleSource = StringUtil.getTextFile(new File(baseFile, moduleName).getAbsolutePath());
                 Module module = ModuleParser.parse(instance, moduleSource);
                 instance.addModule(module);
