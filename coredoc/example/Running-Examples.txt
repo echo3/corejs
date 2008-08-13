@@ -1,0 +1,9 @@
+Echo3 CoreDOC example Instructions.
+
+1.) Download recent copies of Echo3 and Echo3 Extras, either a release (post beta2) or latest Subversion trunk:  http://echo.nextapp.com/site/echo3/download.
+
+2.) Build CoreDOC (run ant build file in root directory of CoreJS project).
+
+3.) Execute the built CoreDoc JAR with a command such as the following, specifying the directories that contain the Echo3 and Echo3Extras source:
+
+java -Dbase.echo=/home/foo/work/echo3 -Dbase.extras=/home/foo/work/echo3extras -jar dist/jar/CoreDoc.jar coredoc/example/echo3/doc.xml
