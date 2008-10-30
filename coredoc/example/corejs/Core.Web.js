@@ -5,8 +5,8 @@
  *  <li>Provides cross-platform API for accessing web client features that have
  *   inconsistent implementations on various browser platforms.</li>
  *  <li>Provides HTTP Connection object (wrapper for XMLHttpRequest).</li>
- *  <li>Provides HTML DOM manipulation capabilites.</li>
- *  <li>Provides DOM event mangement facility, enabling capturing/bubbling phases
+ *  <li>Provides HTML DOM manipulation capabilities.</li>
+ *  <li>Provides DOM event management facility, enabling capturing/bubbling phases
  *   on all browsers, including Internet Explorer 6.</li>
  *  <li>Provides "virtual positioning" capability for Internet Explorer 6 to
  *   render proper top/left/right/bottom CSS positioning.</li>
@@ -43,6 +43,7 @@ Core.Web = {
     
         Core.Web.Env._init();
         Core.Web.Measure._calculateExtentSizes();
+        Core.Web.Measure.Bounds._initMeasureContainer();
         if (Core.Web.Env.QUIRK_CSS_POSITIONING_ONE_SIDE_ONLY) {
             // Enable virtual positioning.
             Core.Web.VirtualPosition._init();
@@ -115,7 +116,15 @@ Core.Web.DOM = {
     createDocument: function(namespaceUri, qualifiedName) {
         if (document.implementation && document.implementation.createDocument) {
             // DOM Level 2 Browsers
-            var dom = document.implementation.createDocument(namespaceUri, qualifiedName, null);
+            var dom;
+            if (Core.Web.Env.BROWSER_FIREFOX && Core.Web.Env.BROWSER_MAJOR_VERSION == 3 &&
+                    Core.Web.Env.BROWSER_MINOR_VERSION === 0) {
+                // https://bugzilla.mozilla.org/show_bug.cgi?id=431701
+                dom = new DOMParser().parseFromString("<?xml version='1.0' encoding='UTF-8'?><" + qualifiedName + "/>",
+                        "application/xml");
+            } else {
+                dom = document.implementation.createDocument(namespaceUri, qualifiedName, null);
+            }
             if (!dom.documentElement) {
                 dom.appendChild(dom.createElement(qualifiedName));
             }
@@ -217,7 +226,7 @@ Core.Web.DOM = {
      *         indicating its upper-left corner
      */
     getEventOffset: function(e) {
-        if (typeof(e.offsetX) == "number") {
+        if (typeof e.offsetX == "number") {
             return { x: e.offsetX, y: e.offsetY };
         } else {
             var bounds = new Core.Web.Measure.Bounds(this.getEventTarget(e));
@@ -394,16 +403,17 @@ Core.Web.Env = {
     _init: function() {
         var ua = navigator.userAgent.toLowerCase();
         this.BROWSER_OPERA = ua.indexOf("opera") != -1;
-        this.BROWSER_SAFARI = ua.indexOf("safari") != -1;
         this.BROWSER_KONQUEROR = ua.indexOf("konqueror") != -1;
         this.BROWSER_FIREFOX = ua.indexOf("firefox") != -1;
+        this.BROWSER_CHROME = ua.indexOf("chrome") != -1;
+        this.BROWSER_SAFARI = !this.BROWSER_CHROME && ua.indexOf("safari") != -1;
         
         this.CSS_FLOAT = "cssFloat";
     
         // Note deceptive user agent fields:
         // - Konqueror and Safari UA fields contain "like Gecko"
         // - Opera UA field typically contains "MSIE"
-        this.DECEPTIVE_USER_AGENT = this.BROWSER_OPERA || this.BROWSER_SAFARI || this.BROWSER_KONQUEROR;
+        this.DECEPTIVE_USER_AGENT = this.BROWSER_OPERA || this.BROWSER_SAFARI || this.BROWSER_CHROME || this.BROWSER_KONQUEROR;
         
         this.BROWSER_MOZILLA = !this.DECEPTIVE_USER_AGENT && ua.indexOf("gecko") != -1;
         this.BROWSER_INTERNET_EXPLORER = !this.DECEPTIVE_USER_AGENT && ua.indexOf("msie") != -1;
@@ -415,15 +425,19 @@ Core.Web.Env = {
             this._parseVersionInfo(ua, "firefox/");
         } else if (this.BROWSER_OPERA) {
             this._parseVersionInfo(ua, "opera/");
+        } else if (this.BROWSER_CHROME) {
+            this._parseVersionInfo(ua, "chrome/");
         } else if (this.BROWSER_SAFARI) {
             this._parseVersionInfo(ua, "version/");
         } else if (this.BROWSER_MOZILLA) {
-            this._parseVersionInfo(ua, "rv:")
+            this._parseVersionInfo(ua, "rv:");
         } else if (this.BROWSER_KONQUEROR) {
             this._parseVersionInfo(ua, "konqueror/");
         }
-    
+
         //FIXME Quirk flags not refined yet, some quirk flags from Echo 2.0/1 will/may be deprecated/removed.
+        
+        this.MEASURE_OFFSET_EXCLUDES_BORDER = false;
                 
         // Set IE Quirk Flags
         if (this.BROWSER_INTERNET_EXPLORER) {
@@ -433,6 +447,9 @@ Core.Web.Env = {
             this.PROPRIETARY_EVENT_SELECT_START_SUPPORTED = true;
             this.QUIRK_IE_KEY_DOWN_EVENT_REPEAT = true;
             this.CSS_FLOAT = "styleFloat";
+            this.QUIRK_DELAYED_FOCUS_REQUIRED = true;
+            this.QUIRK_UNLOADED_IMAGE_HAS_SIZE = true;
+            this.MEASURE_OFFSET_EXCLUDES_BORDER = true;
             
             if (this.BROWSER_MAJOR_VERSION < 8) {
                 // Internet Explorer 6 and 7 Flags.
@@ -441,7 +458,6 @@ Core.Web.Env = {
                 this.QUIRK_IE_REPAINT = true;
                 this.QUIRK_TEXTAREA_CONTENT = true;
                 this.QUIRK_IE_TEXTAREA_NEWLINE_OBLITERATION = true;
-                this.QUIRK_IE_SELECT_LIST_DOM_UPDATE = true;
                 this.QUIRK_CSS_BORDER_COLLAPSE_INSIDE = true;
                 this.QUIRK_CSS_BORDER_COLLAPSE_FOR_0_PADDING = true;
                 this.NOT_SUPPORTED_CSS_OPACITY = true;
@@ -451,18 +467,20 @@ Core.Web.Env = {
                 
                 if (this.BROWSER_MAJOR_VERSION < 7) {
                     // Internet Explorer 6 Flags.
+                    this.QUIRK_IE_SELECT_LIST_DOM_UPDATE = true;
                     this.QUIRK_CSS_POSITIONING_ONE_SIDE_ONLY = true;
                     this.PROPRIETARY_IE_PNG_ALPHA_FILTER_REQUIRED = true;
                     this.QUIRK_CSS_BACKGROUND_ATTACHMENT_USE_FIXED = true;
                     this.QUIRK_IE_SELECT_Z_INDEX = true;
                     this.NOT_SUPPORTED_CSS_MAX_HEIGHT = true;
-                    this.QUIRK_DELAYED_FOCUS_REQUIRED = true;
                     
                     // Enable 'garbage collection' on large associative arrays to avoid memory leak.
                     Core.Arrays.LargeMap.garbageCollectEnabled = true;
                 }
             }
         } else if (this.BROWSER_MOZILLA) {
+            this.MEASURE_OFFSET_EXCLUDES_BORDER = true;
+            this.QUIRK_MEASURE_OFFSET_HIDDEN_BORDER = true;
             if (this.BROWSER_FIREFOX) {
                 if (this.BROWSER_MAJOR_VERSION < 2) {
                     this.QUIRK_DELAYED_FOCUS_REQUIRED = true;
@@ -472,7 +490,16 @@ Core.Web.Env = {
                 this.QUIRK_DELAYED_FOCUS_REQUIRED = true;
             }
         } else if (this.BROWSER_OPERA) {
+            if (this.BROWSER_MAJOR_VERSION == 9 && this.BROWSER_MINOR_VERSION >= 50) {
+                this.QUIRK_OPERA_WINDOW_RESIZE_POSITIONING = true;
+            }
             this.NOT_SUPPORTED_RELATIVE_COLUMN_WIDTHS = true;
+        } else if (this.BROWSER_SAFARI) {
+            this.MEASURE_OFFSET_EXCLUDES_BORDER = true;
+            this.QUIRK_SAFARI_DOM_TEXT_ESCAPE = true;
+        } else if (this.BROWSER_CHROME) {
+            this.MEASURE_OFFSET_EXCLUDES_BORDER = true;
+            this.QUIRK_SAFARI_DOM_TEXT_ESCAPE = true;
         }
     },
     
@@ -508,11 +535,11 @@ Core.Web.Env = {
             }
         }
         
-        this.BROWSER_MAJOR_VERSION = parseInt(ua.substring(ix1 + searchString.length, ix2));
+        this.BROWSER_MAJOR_VERSION = parseInt(ua.substring(ix1 + searchString.length, ix2), 10);
         if (ix2 == ua.length) {
             this.BROWSER_MINOR_VERSION = 0;
         } else {
-            this.BROWSER_MINOR_VERSION = parseInt(ua.substring(ix2 + 1, ix3));
+            this.BROWSER_MINOR_VERSION = parseInt(ua.substring(ix2 + 1, ix3), 10);
         }
     }
 };
@@ -576,7 +603,7 @@ Core.Web.Event = {
             }
         }
     },
-
+    
     /**
      * Next available sequentially assigned element identifier.
      * Elements are assigned unique identifiers to enable mapping between 
@@ -585,6 +612,16 @@ Core.Web.Event = {
      * @type Integer
      */
     _nextId: 0,
+    
+    /**
+     * Current listener count.
+     */
+    _listenerCount: 0,
+    
+    /**
+     * Flag to display listener count every time an event is fired.  Enable this flag to check for listener leaks.
+     */
+    debugListenerCount: false,
     
     /**
      * Mapping between element ids and ListenerLists containing listeners to invoke during capturing phase.
@@ -616,15 +653,14 @@ Core.Web.Event = {
         var listenerList;
         
         // Determine the Core.ListenerList to which the listener should be added.
-        if (element.__eventProcessorId == Core.Web.Event._lastId 
-                && capture == Core.Web.Event._lastCapture) {
+        if (element.__eventProcessorId == Core.Web.Event._lastId && 
+                capture == Core.Web.Event._lastCapture) {
             // If the 'element' and 'capture' properties are identical to those specified on the prior invocation
             // of this method, the correct listener list is stored in the '_lastListenerList' property. 
             listenerList = Core.Web.Event._lastListenerList; 
         } else {
             // Obtain correct id->ListenerList mapping based on capture parameter.
-            var listenerMap = capture ? Core.Web.Event._capturingListenerMap 
-                                      : Core.Web.Event._bubblingListenerMap;
+            var listenerMap = capture ? Core.Web.Event._capturingListenerMap : Core.Web.Event._bubblingListenerMap;
             
             // Obtain ListenerList based on element id.                              
             listenerList = listenerMap.map[element.__eventProcessorId];
@@ -645,6 +681,7 @@ Core.Web.Event = {
         // Register event listener on DOM element.
         if (!listenerList.hasListeners(eventType)) {
             Core.Web.DOM.addEventListener(element, eventType, Core.Web.Event._processEvent, false);
+            ++Core.Web.Event._listenerCount;
         }
 
         // Add event handler to the ListenerList.
@@ -657,13 +694,18 @@ Core.Web.Event = {
      * @param {Event} e 
      */
     _processEvent: function(e) {
+        if (Core.Web.Event.debugListenerCount) {
+            Core.Debug.consoleWrite("Core.Web.Event listener count: " + Core.Web.Event._listenerCount);        
+        }
+
         e = e ? e : window.event;
+        
         if (!e.target && e.srcElement) {
             // The Internet Explorer event model stores the target element in the 'srcElement' property of an event.
             // Modify the event such the target is retrievable using the W3C DOM Level 2 specified property 'target'.
             e.target = e.srcElement;
         }
-        
+
         // Establish array containing elements ancestry, with index 0 containing 
         // the element and the last index containing its most distant ancestor.  
         // Only record elements that have ids.
@@ -675,41 +717,34 @@ Core.Web.Event = {
             }
             targetElement = targetElement.parentNode;
         }
-    
-        var listenerList;
-        
-        var propagate = true;
-        
+
+        var listenerList, i, propagate = true;
+
         // Fire event to capturing listeners.
-        for (var i = elementAncestry.length - 1; i >= 0; --i) {
+        for (i = elementAncestry.length - 1; i >= 0; --i) {
             listenerList = Core.Web.Event._capturingListenerMap.map[elementAncestry[i].__eventProcessorId];
             if (listenerList) {
                 // Set registered target on event.
                 e.registeredTarget = elementAncestry[i];
                 if (!listenerList.fireEvent(e)) {
+                    // Stop propagation if requested.
                     propagate = false;
+                    break;
                 }
-            }
-            if (!propagate) {
-                // Stop propagation if requested.
-                break;
             }
         }
-        
+
         if (propagate) {
             // Fire event to bubbling listeners.
-            for (var i = 0; i < elementAncestry.length; ++i) {
+            for (i = 0; i < elementAncestry.length; ++i) {
                 listenerList = Core.Web.Event._bubblingListenerMap.map[elementAncestry[i].__eventProcessorId];
-                // Set registered target on event.
-                e.registeredTarget = elementAncestry[i];
                 if (listenerList) {
+                    // Set registered target on event.
+                    e.registeredTarget = elementAncestry[i];
                     if (!listenerList.fireEvent(e)) {
-                        propagate = false;
+                        // Stop propagation if requested.
+                        break;
                     }
-                }
-                if (!propagate) {
-                    // Stop propagation if requested.
-                    break;
                 }
             }
         }
@@ -736,8 +771,7 @@ Core.Web.Event = {
         }
     
         // Obtain correct id->ListenerList mapping based on capture parameter.
-        var listenerMap = capture ? Core.Web.Event._capturingListenerMap 
-                                  : Core.Web.Event._bubblingListenerMap;
+        var listenerMap = capture ? Core.Web.Event._capturingListenerMap : Core.Web.Event._bubblingListenerMap;
     
         // Obtain ListenerList based on element id.                              
         var listenerList = listenerMap.map[element.__eventProcessorId];
@@ -752,6 +786,7 @@ Core.Web.Event = {
             // Unregister event listener on DOM element if all listeners have been removed.
             if (!listenerList.hasListeners(eventType)) {
                 Core.Web.DOM.removeEventListener(element, eventType, Core.Web.Event._processEvent, false);
+                --Core.Web.Event._listenerCount;
             }
         }
     },
@@ -789,7 +824,8 @@ Core.Web.Event = {
     
         var types = listenerList.getListenerTypes();
         for (var i = 0; i < types.length; ++i) {
-            Core.Web.DOM.removeEventListener(element, types[i], Core.Web.Event._processEvent, false); 
+            Core.Web.DOM.removeEventListener(element, types[i], Core.Web.Event._processEvent, false);
+            --Core.Web.Event._listenerCount;
         }
         
         listenerMap.remove(element.__eventProcessorId);
@@ -799,12 +835,11 @@ Core.Web.Event = {
      * toString() implementation for debugging purposes.
      * Displays contents of capturing and bubbling listener maps.
      * 
-     * @return string represenation of listener maps
+     * @return string representation of listener maps
      * @type String
      */
     toString: function() {
-        return "Capturing: " + Core.Web.Event._capturingListenerMap + "\n"
-                + "Bubbling: " + Core.Web.Event._bubblingListenerMap;
+        return "Capturing: " + Core.Web.Event._capturingListenerMap + "\n" + "Bubbling: " + Core.Web.Event._bubblingListenerMap;
     }
 };
 
@@ -828,6 +863,8 @@ Core.Web.HttpConnection = Core.extend({
     _disposed: false,
     
     _xmlHttpRequest: null,
+    
+    _requestHeaders: null,
 
     /**
      * Creates a new <code>HttpConnection</code>.
@@ -844,8 +881,28 @@ Core.Web.HttpConnection = Core.extend({
         this._url = url;
         this._contentType = contentType;
         this._method = method;
+        if (Core.Web.Env.QUIRK_SAFARI_DOM_TEXT_ESCAPE && messageObject instanceof Document) {
+            this._preprocessSafariDOM(messageObject.documentElement);
+        }
+        
         this._messageObject = messageObject;
         this._listenerList = new Core.ListenerList();
+    },
+    
+    _preprocessSafariDOM: function(node) {
+        if (node.nodeType == 3) {
+            var value = node.data;
+            value = value.replace(/&/g, "&amp;");
+            value = value.replace(/</g, "&lt;");
+            value = value.replace(/>/g, "&gt;");
+            node.data = value;
+        } else {
+            var child = node.firstChild;
+            while (child) {
+                this._preprocessSafariDOM(child);
+                child = child.nextSibling;
+            }
+        }
     },
     
     /**
@@ -890,10 +947,24 @@ Core.Web.HttpConnection = Core.extend({
         };
         
         this._xmlHttpRequest.open(this._method, this._url, true);
-    
+
+        // Set headers.
+        if (this._requestHeaders && (usingActiveXObject || this._xmlHttpRequest.setRequestHeader)) {
+            for(var h in this._requestHeaders) {
+                try {
+                    this._xmlHttpRequest.setRequestHeader(h, this._requestHeaders[h]);
+                } catch (e) {
+                    throw new Error("Failed to set header \"" + h + "\"");
+                }
+            }
+        }
+        
+        // Set Content-Type, if supplied.
         if (this._contentType && (usingActiveXObject || this._xmlHttpRequest.setRequestHeader)) {
             this._xmlHttpRequest.setRequestHeader("Content-Type", this._contentType);
         }
+
+        // Execute request.
         this._xmlHttpRequest.send(this._messageObject ? this._messageObject : null);
     },
     
@@ -906,12 +977,30 @@ Core.Web.HttpConnection = Core.extend({
         this._messageObject = null;
         this._xmlHttpRequest = null;
         this._disposed = true;
+        this._requestHeaders = null;
+    },
+    
+    /**
+     * Returns a header from the received response.
+     * @param {String} header the header to retrieve
+     */
+    getResponseHeader: function(header) {
+        return this._xmlHttpRequest ? this._xmlHttpRequest.getResponseHeader(header) : null;
+    },
+    
+    /**
+     * Returns all the headers of the response.
+     * @param {String} header the header to retrieve
+     */
+    getAllResponseHeaders: function() {
+        return this._xmlHttpRequest ? this._xmlHttpRequest.getAllResponseHeaders() : null;
     },
     
     /**
      * Returns the response status code of the HTTP connection, if available.
      * 
-     * @return Integer the response status code
+     * @return the response status code
+     * @type Integer
      */
     getStatus: function() {
         return this._xmlHttpRequest ? this._xmlHttpRequest.status : null;
@@ -952,15 +1041,17 @@ Core.Web.HttpConnection = Core.extend({
             var responseEvent;
             try {
                 // 0 included as a valid response code for non-served applications.
-                var valid = this._xmlHttpRequest.status == 0 ||  
+                var valid = !this._xmlHttpRequest.status ||  
                         (this._xmlHttpRequest.status >= 200 && this._xmlHttpRequest.status <= 299);
                 responseEvent = {type: "response", source: this, valid: valid};
             } catch (ex) {
                 responseEvent = {type: "response", source: this, valid: false, exception: ex};
             }
             
-            this._listenerList.fireEvent(responseEvent);
-            this.dispose();
+            Core.Web.Scheduler.run(Core.method(this, function() {
+                this._listenerList.fireEvent(responseEvent);
+                this.dispose();
+            }));
         }
     },
     
@@ -971,6 +1062,19 @@ Core.Web.HttpConnection = Core.extend({
      */
     removeResponseListener: function(l) {
         this._listenerList.removeListener("response", l);
+    },
+    
+    /**
+     * Sets a header in the request.
+     * 
+     * @param {String} header the header to retrieve
+     * @param {String} value the value of the header
+     */
+    setRequestHeader: function(header, value) {
+        if (!this._requestHeaders) {
+            this._requestHeaders = { };
+        } 
+        this._requestHeaders[header] = value;
     }
 });
 
@@ -1136,7 +1240,7 @@ Core.Web.Library = {
         },
         
         /**
-         * Event listener for response from the HttpConnection used to retrive the library.
+         * Event listener for response from the HttpConnection used to retrieve the library.
          * 
          * @param e the event
          * @private
@@ -1216,7 +1320,7 @@ Core.Web.Library = {
  * Namespace for measuring-related operations.
  * @class
  */
-Core.Web.Measure = { 
+Core.Web.Measure = {
 
     _scrollElements: ["div", "body"],
 
@@ -1237,17 +1341,31 @@ Core.Web.Measure = {
     
     /** Size of one 'em' in vertical pixels. */
     _vEm: 13.3333,
+    
+    /** Estimated scroll bar width. */
+    SCROLL_WIDTH: 17,
+    
+    /** Estimated scroll bar height. */
+    SCROLL_HEIGHT: 17,
+    
+    _PARSER: /^(-?\d+(?:\.\d+)?)(.+)?$/,
 
     /**
-     * Converts any non-relative extent value to pixels.
+     * Converts any non-relative extent value to pixels.  Returns null in the case of a percentage extent.
      * 
-     * @param {Number} value the value to convert
-     * @param {String} units units, one of the following values: in, cm, mm, pt, pc, em, ex
+     * @param {String} value a unitized extent value, e.g., "2px", "5em", etc.
      * @param {Boolean} horizontal a flag indicating whether the extent is horizontal (true) or vertical (false)
      * @return the pixel value (may have a fractional part)
      * @type Number
      */
-    extentToPixels: function(value, units, horizontal) {
+    extentToPixels: function(extent, horizontal) {
+        var parts = this._PARSER.exec(extent);
+        if (!parts) {
+            throw new Error("Invalid Extent: " + extent);
+        }
+        var value = parseFloat(parts[1]);
+        var units = parts[2] ? parts[2] : "px";
+
         if (!units || units == "px") {
             return value;
         }
@@ -1302,7 +1420,7 @@ Core.Web.Measure = {
      * Measures the scrollbar offset of an element, including any
      * scroll-bar related offsets of its ancestors.
      * 
-     * @param element the elemnt to measure
+     * @param element the element to measure
      * @return the offset data, with 'left' and 'top' properties specifying the offset amounts
      * @type Object
      * @private
@@ -1310,11 +1428,11 @@ Core.Web.Measure = {
     _getScrollOffset: function(element) {
         var valueT = 0, valueL = 0;
         do {
-            if ((element.scrollLeft || element.scrollTop) && element.nodeName.toLowerCase() in this._scrollElements) {
+            if (element.scrollLeft || element.scrollTop) {
                 valueT += element.scrollTop  || 0;
                 valueL += element.scrollLeft || 0; 
             }
-            element = element.parentNode;
+            element = element.offsetParent;
         } while (element);
         return { left: valueL, top: valueT };
     },
@@ -1328,10 +1446,27 @@ Core.Web.Measure = {
      * @private
      */
     _getCumulativeOffset: function(element) {
-        var valueT = 0, valueL = 0;
+        var valueT = 0, 
+            valueL = 0,
+            init = true;
         do {
             valueT += element.offsetTop  || 0;
             valueL += element.offsetLeft || 0;
+            if (element.style.borderLeftWidth && !init && Core.Web.Env.MEASURE_OFFSET_EXCLUDES_BORDER) {
+                var borderLeft = Core.Web.Measure.extentToPixels(element.style.borderLeftWidth, true);
+                valueL += borderLeft;
+                if (Core.Web.Env.QUIRK_MEASURE_OFFSET_HIDDEN_BORDER && element.style.overflow == "hidden") {
+                    valueL += borderLeft;
+                }
+            }
+            if (element.style.borderTopWidth && !init && Core.Web.Env.MEASURE_OFFSET_EXCLUDES_BORDER) {
+                var borderTop = Core.Web.Measure.extentToPixels(element.style.borderTopWidth, false);
+                valueT += borderTop;
+                if (Core.Web.Env.QUIRK_MEASURE_OFFSET_HIDDEN_BORDER && element.style.overflow == "hidden") {
+                    valueT += borderTop;
+                }
+            }
+            init = false;
             element = element.offsetParent;
         } while (element);
         return { left: valueL, top: valueT };
@@ -1344,6 +1479,16 @@ Core.Web.Measure = {
      * off-screen buffer for measuring.
      */
     Bounds: Core.extend({
+
+        $static: {
+            _initMeasureContainer: function() {
+                // Create off-screen div element for evaluating sizes.
+                this._offscreenDiv = document.createElement("div");
+                this._offscreenDiv.style.cssText = 
+                        "position: absolute; top: -1300px; left: -1700px; width: 1600px; height: 1200px;";
+                document.body.appendChild(this._offscreenDiv);
+            }
+        },
 
         /**
          * The width of the element, in pixels.
@@ -1376,22 +1521,23 @@ Core.Web.Measure = {
          * @constructor
          */    
         $construct: function(element) {
+            if (element === document.body) {
+                return { 
+                    x: 0,
+                    y: 0,
+                    height: window.innerHeight || document.documentElement.clientHeight,
+                    width: window.innerWidth || document.documentElement.clientWidth
+                };
+            }
+            
             var testElement = element;
             while (testElement && testElement != document) {
                 testElement = testElement.parentNode;
             }
             var rendered = testElement == document;
             
-            // Create off-screen div element for evaluating sizes if necessary.
-            if (!Core.Web.Measure.Bounds._offscreenDiv) {
-                Core.Web.Measure.Bounds._offscreenDiv = document.createElement("div");
-                Core.Web.Measure.Bounds._offscreenDiv.style.cssText 
-                        = "position: absolute; top: -1700px; left: -1300px; width: 1600px; height: 1200px;";
-            }
-        
             var parentNode, nextSibling;
             if (!rendered) {
-                document.body.appendChild(Core.Web.Measure.Bounds._offscreenDiv);
                 // Element must be added to off-screen element for measuring.
                 
                 // Store parent node and next sibling such that element may be replaced into proper position
@@ -1419,7 +1565,6 @@ Core.Web.Measure = {
                 if (parentNode) {
                     parentNode.insertBefore(element, nextSibling);
                 }
-                document.body.removeChild(Core.Web.Measure.Bounds._offscreenDiv);
             }
             
             // Determine top and left positions of element if rendered on-screen.
@@ -1479,20 +1624,24 @@ Core.Web.Scheduler = {
         Core.Arrays.remove(Core.Web.Scheduler._runnables, runnable);
         runnable._nextExecution = new Date().getTime() + (runnable.timeInterval ? runnable.timeInterval : 0);
         Core.Web.Scheduler._runnables.push(runnable);
-        Core.Web.Scheduler._start(runnable._nextExecution);
+        Core.Web.Scheduler._setTimeout(runnable._nextExecution);
     },
 
     /**
      * Executes the scheduler, running any runnables that are due.
-     * This method is invoked by the interval/thread.
+     * DESIGN NOTE: this method MUST ONLY be invoked by the timeout handle Core.Web.Scheduler._threadHandle.
      */
     _execute: function() {
+        // Mark now-defunct timeout thread handle as null, because this method was invoked by it.
+        Core.Web.Scheduler._threadHandle = null;
+        
         var currentTime = new Date().getTime();
         var nextInterval = Number.MAX_VALUE;
+        var i, runnable;
         
         // Execute pending runnables.
-        for (var i = 0; i < Core.Web.Scheduler._runnables.length; ++i) {
-            var runnable = Core.Web.Scheduler._runnables[i];
+        for (i = 0; i < Core.Web.Scheduler._runnables.length; ++i) {
+            runnable = Core.Web.Scheduler._runnables[i];
             if (runnable && runnable._nextExecution && runnable._nextExecution <= currentTime) {
                 runnable._nextExecution = null;
                 try {
@@ -1504,8 +1653,8 @@ Core.Web.Scheduler = {
         }
 
         var newRunnables = [];
-        for (var i = 0; i < Core.Web.Scheduler._runnables.length; ++i) {
-            var runnable = Core.Web.Scheduler._runnables[i];
+        for (i = 0; i < Core.Web.Scheduler._runnables.length; ++i) {
+            runnable = Core.Web.Scheduler._runnables[i];
             if (runnable == null) {
                 continue;
             }
@@ -1541,10 +1690,7 @@ Core.Web.Scheduler = {
         Core.Web.Scheduler._runnables = newRunnables;
         
         if (nextInterval < Number.MAX_VALUE) {
-            Core.Web.Scheduler._nextExecution = currentTime + nextInterval;
-            Core.Web.Scheduler._threadHandle = window.setTimeout(Core.Web.Scheduler._execute, nextInterval);
-        } else {
-            Core.Web.Scheduler._threadHandle = null;
+            Core.Web.Scheduler._setTimeout(currentTime + nextInterval);
         }
     },
     
@@ -1561,7 +1707,7 @@ Core.Web.Scheduler = {
     /**
      * Creates a new Runnable that executes the specified method and enqueues it into the scheduler.
      * 
-     * @param {Number} time the time interval, in milleseconds, after which the Runnable should be executed
+     * @param {Number} time the time interval, in milliseconds, after which the Runnable should be executed
      *        (may be null/undefined to execute task immediately, in such cases repeat must be false)
      * @param {Boolean} repeat a flag indicating whether the task should be repeated
      * @param f a function to invoke, may be null/undefined
@@ -1575,35 +1721,25 @@ Core.Web.Scheduler = {
     },
     
     /**
-     * Starts the scheduler "thread".
-     * If the scheduler is already running, no action is taken.
+     * Starts the scheduler "thread", to execute at the specified time.
+     * If the specified time is in the past, it will execute with a delay of 0.
      * @private
      */
-    _start: function(nextExecution) {
-        var currentTime = new Date().getTime();
-        if (Core.Web.Scheduler._threadHandle == null) {
-            Core.Web.Scheduler._nextExecution = nextExecution;
-            Core.Web.Scheduler._threadHandle = window.setTimeout(Core.Web.Scheduler._execute, nextExecution - currentTime);
-        } else if (nextExecution < Core.Web.Scheduler._nextExecution) { 
-            // Cancel current timeout, start new timeout.
-            window.clearTimeout(Core.Web.Scheduler._threadHandle);
-            Core.Web.Scheduler._nextExecution = nextExecution;
-            Core.Web.Scheduler._threadHandle = window.setTimeout(Core.Web.Scheduler._execute, nextExecution - currentTime);
-        }
-    },
-    
-    /**
-     * Stops the scheduler "thread".
-     * If the scheduler is not running, no action is taken.
-     * @private
-     */
-    _stop: function() {
-        if (Core.Web.Scheduler._threadHandle == null) {
+    _setTimeout: function(nextExecution) {
+        if (Core.Web.Scheduler._threadHandle != null && Core.Web.Scheduler._nextExecution < nextExecution) {
+            // The current timeout will fire before nextExecution, thus no work needs to be done here.
             return;
         }
-        window.clearTimeout(Core.Web.Scheduler._threadHandle);
-        Core.Web.Scheduler._threadHandle = null;
-        Core.Web.Scheduler._nextExecution = null;
+        
+        if (Core.Web.Scheduler._threadHandle != null) {
+            // Clear any existing timeout.
+            window.clearTimeout(Core.Web.Scheduler._threadHandle);
+        }
+        
+        var currentTime = new Date().getTime();
+        Core.Web.Scheduler._nextExecution = nextExecution;
+        var timeout = nextExecution - currentTime > 0 ? nextExecution - currentTime : 0;
+        Core.Web.Scheduler._threadHandle = window.setTimeout(Core.Web.Scheduler._execute, timeout);
     },
     
     update: function(runnable) {
@@ -1613,7 +1749,7 @@ Core.Web.Scheduler = {
         var currentTime = new Date().getTime();
         var timeInterval = runnable.timeInterval ? runnable.timeInterval : 0;
         runnable._nextExecution = currentTime + timeInterval;
-        Core.Web.Scheduler._start(runnable._nextExecution);
+        Core.Web.Scheduler._setTimeout(runnable._nextExecution);
     }
 };
 
@@ -1627,7 +1763,7 @@ Core.Web.Scheduler.Runnable = Core.extend({
     $virtual: {
 
         /** 
-         * Time interval, in milleseconds after which the Runnable should be executed.
+         * Time interval, in milliseconds after which the Runnable should be executed.
          * @type Number
          */
         timeInterval: null,
@@ -1646,7 +1782,7 @@ Core.Web.Scheduler.Runnable = Core.extend({
 });
 
 /**
- * A runnable task implemenation that invokes a function at regular intervals.
+ * A runnable task implementation that invokes a function at regular intervals.
  */
 Core.Web.Scheduler.MethodRunnable = Core.extend(Core.Web.Scheduler.Runnable, {
 
@@ -1656,7 +1792,7 @@ Core.Web.Scheduler.MethodRunnable = Core.extend(Core.Web.Scheduler.Runnable, {
      * Creates a new Runnable.
      *
      * @constructor
-     * @param {Number} time the time interval, in milleseconds, after which the Runnable should be executed
+     * @param {Number} time the time interval, in milliseconds, after which the Runnable should be executed
      *        (may be null/undefined to execute task immediately, in such cases repeat must be false)
      * @param {Boolean} repeat a flag indicating whether the task should be repeated
      * @param {Function} f a function to invoke, may be null/undefined
@@ -1673,7 +1809,7 @@ Core.Web.Scheduler.MethodRunnable = Core.extend(Core.Web.Scheduler.Runnable, {
     $virtual: {
         
         /**
-         * Default run() implementation. Should be overidden by subclasses.
+         * Default run() implementation. Should be overridden by subclasses.
          */
         run: function() {
             this.f();
@@ -1720,7 +1856,7 @@ Core.Web.VirtualPosition = {
                 if (value.toString().indexOf("px") == -1) {
                     return -1;
                 }
-                offsets += parseInt(value);
+                offsets += parseInt(value, 10);
             }
         }
         return offsets;
@@ -1749,6 +1885,8 @@ Core.Web.VirtualPosition = {
         if (!element || !element.parentNode) {
             return;
         }
+        
+        var offsets;
     
         // Adjust 'height' property if 'top' and 'bottom' properties are set, 
         // and if all padding/margin/borders are 0 or set in pixel units.
@@ -1758,9 +1896,10 @@ Core.Web.VirtualPosition = {
             // the element is no longer hierarchy.
             var offsetHeight = element.parentNode.offsetHeight;
             if (!isNaN(offsetHeight)) {
-                var offsets = this._calculateOffsets(this._OFFSETS_VERTICAL, element.style);
+                offsets = this._calculateOffsets(this._OFFSETS_VERTICAL, element.style);
                 if (offsets != -1) {
-                    var calculatedHeight = offsetHeight - parseInt(element.style.top) - parseInt(element.style.bottom) - offsets;
+                    var calculatedHeight = offsetHeight - parseInt(element.style.top, 10) - 
+                            parseInt(element.style.bottom, 10) - offsets;
                     if (calculatedHeight <= 0) {
                         element.style.height = 0;
                     } else {
@@ -1780,9 +1919,10 @@ Core.Web.VirtualPosition = {
             // the element is no longer hierarchy.
             var offsetWidth = element.parentNode.offsetWidth;
             if (!isNaN(offsetWidth)) {
-                var offsets = this._calculateOffsets(this._OFFSETS_HORIZONTAL, element.style);
+                offsets = this._calculateOffsets(this._OFFSETS_HORIZONTAL, element.style);
                 if (offsets != -1) {
-                    var calculatedWidth = offsetWidth - parseInt(element.style.left) - parseInt(element.style.right) - offsets;
+                    var calculatedWidth = offsetWidth - parseInt(element.style.left, 10) - 
+                            parseInt(element.style.right, 10) - offsets;
                     if (calculatedWidth <= 0) {
                         element.style.width = 0;
                     } else {
@@ -1803,7 +1943,7 @@ Core.Web.VirtualPosition = {
      * @return true if the value is a pixel dimension, false if it is not
      */
     _verifyPixelValue: function(value) {
-        if (value == null || value == "" || value == undefined) {
+        if (value == null || value === "") {
             return false;
         }
         var valueString = value.toString();

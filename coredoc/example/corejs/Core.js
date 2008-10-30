@@ -14,7 +14,7 @@
  *    methods of an object instance may be created using the Core.method() function.</li>
  *  <li>Provides a "Large Map" useful for managing an associative array that is frequently modified
  *    and will exist for a long period of time.  This object is unfortunately necessary due to
- *    issues present in certain clients (Internet Explorer 6 memory leak / performance degredation).</li>
+ *    issues present in certain clients (Internet Explorer 6 memory leak / performance degradation).</li>
  *  <li>Provides array manipulation utilities.<li>
  *  <li>Provides some simple debugging utilities, e.g., a pseudo-console output.</li>
  *  <li>Does not provide any web-specific functionality.</li>
@@ -28,20 +28,16 @@
 Core = {
 
     /**
-     * Creates a duplicate copy of a function.
-     * Per the ECMA-262 v3 specification, Function.toString() is required to return an (implementation specific)
-     * string representation of the function.
-     * Creating a copy of a constructor is more efficient than invoking Function.apply() in certain browsers
-     * (a significant performance improvement was observed in Internet Explorer 6).
+     * Creates a duplicate copy of a function by wrapping the original in a closure.
      *
      * @param f the function
-     * @return an identical copy
+     * @return an effectively identical copy
      * @private
      */
     _copyFunction: function(f) {
-        var fCopy;
-        eval("fCopy = " + f.toString() + ";");
-        return fCopy;
+        return function() {
+            f.apply(this, arguments);
+        };
     },
     
     /**
@@ -98,8 +94,10 @@ Core = {
         var baseClass = arguments.length == 1 ? null : arguments[0];
         var definition = arguments.length == 1 ? arguments[0] : arguments[1];
         
+        var x, name;
+        
         // Perform argument error checking.
-        if (baseClass) {
+        if (arguments.length == 2) {
             if (typeof(baseClass) != "function") {
                 throw new Error("Base class is not a function, cannot derive.");
             }
@@ -154,14 +152,14 @@ Core = {
             constructorClass.$abstract = {};
             if (baseClass && baseClass.$abstract) {
                 // Copy abstract properties from base class.
-                for (var x in baseClass.$abstract) {
+                for (x in baseClass.$abstract) {
                     constructorClass.$abstract[x] = baseClass.$abstract[x];
                 }
             }
 
             if (definition.$abstract instanceof Object) {
                 // Add abstract properties from definition.
-                for (var x in definition.$abstract) {
+                for (x in definition.$abstract) {
                     constructorClass.$abstract[x] = true;
                     constructorClass.$virtual[x] = true;
                 }
@@ -173,7 +171,7 @@ Core = {
         
         // Copy virtual property flags from base class to shared prototype.
         if (baseClass) {
-            for (var name in baseClass.$virtual) {
+            for (name in baseClass.$virtual) {
                 constructorClass.$virtual[name] = baseClass.$virtual[name];
             }
         }
@@ -181,7 +179,7 @@ Core = {
         // Add virtual instance properties from definition to shared prototype.
         if (definition.$virtual) {
             Core._inherit(constructorClass.prototype, definition.$virtual, constructorClass.$virtual);
-            for (var name in definition.$virtual) {
+            for (name in definition.$virtual) {
                 constructorClass.$virtual[name] = true;
             }
 
@@ -306,7 +304,7 @@ Core = {
      */
     _inherit: function(destination, source, virtualProperties) {
         for (var name in source) {
-            if (virtualProperties && destination[name] && !this._isVirtual(virtualProperties, name)) {
+            if (virtualProperties && destination[name] !== undefined && !this._isVirtual(virtualProperties, name)) {
                 // Property exists in destination as is not marked as virtual.
                 throw new Error("Cannot override non-virtual property \"" + name + "\".");
             } else {
@@ -320,7 +318,7 @@ Core = {
      * Any arguments passed to the returned function will be passed to the method.
      * The return value of the method will be returned by the function.
      *
-     * CAUTION: When adding and removing methods as listeners, note that two seperately
+     * CAUTION: When adding and removing methods as listeners, note that two separately
      * constructed methods will not be treated as equal, even if their instance and method
      * properties are the same.  Failing to heed this warning can result in a memory leak,
      * as listeners would never be removed.
@@ -404,7 +402,7 @@ Core = {
          }
          
          for (var x in baseClass.$abstract) {
-             if (!constructorClass.prototype[x]) {
+             if (constructorClass.prototype[x] == null) {
                  throw new Error("Concrete class does not provide implementation of abstract method \"" + x + "\".");
              }
          }
@@ -439,7 +437,7 @@ Core.Debug = {
         if (Core.Debug.consoleElement) {
             var entryElement = document.createElement("div");
             entryElement.appendChild(document.createTextNode(text));
-            if (Core.Debug.consoleElement.childNodes.length == 0) {
+            if (Core.Debug.consoleElement.childNodes.length === 0) {
                 Core.Debug.consoleElement.appendChild(entryElement);
             } else {
                 Core.Debug.consoleElement.insertBefore(entryElement, Core.Debug.consoleElement.firstChild);
@@ -488,7 +486,7 @@ Core.Arrays = {
         if (unique && array1.length < array2.length) {
             return false;
         }
-        if (array2.length == 0) {
+        if (array2.length === 0) {
             return true;
         }
         var found, item;
@@ -634,6 +632,10 @@ Core.Arrays.LargeMap = Core.extend({
                 this._garbageCollect();
             }
         }
+    },
+    
+    toString: function() {
+        return Core.Debug.toString(this.map);
     }
 });
 
@@ -684,15 +686,15 @@ Core.ListenerList = Core.extend({
             throw new Error("Cannot fire event, type property not set.");
         }
         
-        var listeners = [];
-        for (var i = 0; i < this._data.length; i += 2) {
+        var i, returnValue = true, listeners = [];
+        
+        for (i = 0; i < this._data.length; i += 2) {
             if (this._data[i] == event.type) {
                 listeners.push(this._data[i + 1]);
             }
         }
         
-        var returnValue = true;
-        for (var i = 0; i < listeners.length; ++i) {
+        for (i = 0; i < listeners.length; ++i) {
             returnValue = listeners[i](event) && returnValue; 
         }
         return returnValue;
@@ -771,7 +773,7 @@ Core.ListenerList = Core.extend({
      * @type Boolean
      */
     isEmpty: function() {
-        return this._data.length == 0;
+        return this._data.length === 0;
     },
     
     /**
@@ -816,9 +818,9 @@ Core.ResourceBundle = Core.extend({
         /**
          * Generates a less specific version of the specified language code.
          * Returns null if no "parent" language code can be determined.
-         * This operation is implemented  by removing the subtag (if found)
+         * This operation is implemented  by removing the sub-tag (if found)
          * from the specified RFC 1766 language code.  If the language
-         * code does not have a subtag, null is returned.
+         * code does not have a sub-tag, null is returned.
          *
          * @param {String} languageCode an RFC 1766 language code
          * @return a less specific version of the specified language code,
@@ -876,7 +878,7 @@ Core.ResourceBundle = Core.extend({
         // Copy any missing items found in parent language bundle (if it exists) into new bundle.
         var parentLanguageCode = Core.ResourceBundle.getParentLanguageCode(languageCode);
         if (parentLanguageCode) {
-            var sourceBundle = this._sourceBundles[parentLanguageCode];
+            sourceBundle = this._sourceBundles[parentLanguageCode];
             if (sourceBundle) {
                 for (x in sourceBundle) {
                     if (bundle[x] === undefined) {
