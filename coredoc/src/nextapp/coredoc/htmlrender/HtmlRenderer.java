@@ -19,7 +19,7 @@ import nextapp.coredoc.model.Instance;
 import nextapp.coredoc.model.Node;
 import nextapp.coredoc.util.Resource;
 
-public class Generator {
+public class HtmlRenderer {
     
     private Map typeToUrlMap = new HashMap();
     private Instance instance;
@@ -29,7 +29,7 @@ public class Generator {
     private Map customTypeToDisplayText = new HashMap();
     private String title = "Generated Documentation";
     
-    public Generator(Instance instance) {
+    public HtmlRenderer(Instance instance) {
         this.instance = instance;
     }
     

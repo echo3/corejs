@@ -151,13 +151,13 @@ public class ClassRender {
     private List classFields = new ArrayList();
     private List instanceFields = new ArrayList();
     private ClassBlock classBlock;
-    private Generator generator;
+    private HtmlRenderer generator;
     private PropertyDO constructor;
     private DocComment docComment;
     private Set descendantClasses = new TreeSet();
     private String qualifiedName;
     
-    public ClassRender(Generator generator, ClassBlock classBlock) {
+    public ClassRender(HtmlRenderer generator, ClassBlock classBlock) {
         super();
         
         this.generator = generator;

@@ -46,7 +46,7 @@ public class CustomTagRender {
     private String requiredType;
     private String templateFile;
     private String tagName;
-    private Generator generator;
+    private HtmlRenderer generator;
     
     public CustomTagRender(String tagName, String templateFile) {
         super();
@@ -92,7 +92,7 @@ public class CustomTagRender {
         return "";
     }
         
-    public void setGenerator(Generator generator) {
+    public void setGenerator(HtmlRenderer generator) {
         this.generator = generator;
     }
     
