@@ -1,4 +1,4 @@
-package nextapp.coredoc.htmlrender;
+package nextapp.coredoc.render;
 
 import java.io.Writer;
 import java.util.Iterator;
@@ -30,12 +30,12 @@ public class CustomTagRender {
         
         public boolean isCustomType() {
             String type = DocComment.getParameterType(tag);
-            return generator.getCustomType(type) != null;
+            return renderer.getCustomType(type) != null;
         }
         
         public String getType() {
             String type = DocComment.getParameterType(tag);
-            String customType = generator.getCustomType(type);
+            String customType = renderer.getCustomType(type);
             if (customType != null) {
                 return customType;
             }
@@ -46,7 +46,7 @@ public class CustomTagRender {
     private String requiredType;
     private String templateFile;
     private String tagName;
-    private HtmlRenderer generator;
+    private Renderer renderer;
     
     public CustomTagRender(String tagName, String templateFile) {
         super();
@@ -92,8 +92,8 @@ public class CustomTagRender {
         return "";
     }
         
-    public void setGenerator(HtmlRenderer generator) {
-        this.generator = generator;
+    public void setRenderer(Renderer renderer) {
+        this.renderer = renderer;
     }
     
     public void render(ClassBlock classBlock, Writer w) 
@@ -102,7 +102,7 @@ public class CustomTagRender {
         VelocityContext context = new VelocityContext();
         context.put("tagRender", this);
         context.put("classBlock", classBlock);
-        generator.getInstance();
+        renderer.getInstance();
         template.merge(context, w);
     }
     

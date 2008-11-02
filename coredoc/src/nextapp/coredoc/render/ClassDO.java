@@ -1,7 +1,5 @@
-package nextapp.coredoc.htmlrender;
+package nextapp.coredoc.render;
 
-import java.io.File;
-import java.io.FileWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -9,10 +7,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-
-import org.apache.velocity.Template;
-import org.apache.velocity.VelocityContext;
-import org.apache.velocity.app.Velocity;
 
 import nextapp.coredoc.model.Block;
 import nextapp.coredoc.model.ClassBlock;
@@ -23,7 +17,7 @@ import nextapp.coredoc.model.Modifiers;
 import nextapp.coredoc.model.FunctionBlock.Parameter;
 import nextapp.coredoc.util.StringUtil;
 
-public class ClassRender {
+public class ClassDO {
     
     public static class PropertyDO {
         
@@ -151,18 +145,16 @@ public class ClassRender {
     private List classFields = new ArrayList();
     private List instanceFields = new ArrayList();
     private ClassBlock classBlock;
-    private HtmlRenderer generator;
+    private Renderer renderer;
     private PropertyDO constructor;
-    private DocComment docComment;
     private Set descendantClasses = new TreeSet();
     private String qualifiedName;
     
-    public ClassRender(HtmlRenderer generator, ClassBlock classBlock) {
+    public ClassDO(Renderer renderer, ClassBlock classBlock) {
         super();
         
-        this.generator = generator;
+        this.renderer = renderer;
         this.classBlock = classBlock;
-        docComment = classBlock.getDocComment();
         qualifiedName = classBlock.getQualifiedName();
         
         System.err.println("Processing: " + qualifiedName);
@@ -249,10 +241,10 @@ public class ClassRender {
         
         List customSummaryBlocks = null;
         
-        Iterator tagRenderNameIt = generator.getTagRenderNames();
+        Iterator tagRenderNameIt = renderer.getTagRenderNames();
         while (tagRenderNameIt.hasNext()) {
             String tagRenderName = (String) tagRenderNameIt.next();
-            CustomTagRender tagRender = generator.getTagRender(tagRenderName);
+            CustomTagRender tagRender = renderer.getTagRender(tagRenderName);
             String requiredType = tagRender.getRequiredType();
             if (requiredType != null && !classBlock.isInstanceOf(requiredType)) {
                 // Class does not meet required type specification.
@@ -317,7 +309,7 @@ public class ClassRender {
     }
     
     public int getInstanceMethodCount(ClassBlock classBlock) {
-        ClassRender cr = generator.getClassRender(classBlock);
+        ClassDO cr = renderer.getClassRender(classBlock);
         return cr.getInstanceMethodCount();
     }
     
@@ -326,34 +318,11 @@ public class ClassRender {
     }
     
     public Iterator getInstanceMethods(ClassBlock classBlock) {
-        ClassRender cr = generator.getClassRender(classBlock);
+        ClassDO cr = renderer.getClassRender(classBlock);
         return cr.getInstanceMethods();
     }
     
     public Iterator getInstanceProperties() {
         return instanceProperties.size() == 0 ? null : instanceProperties.iterator();
-    }
-    
-    public void render() 
-    throws Exception {
-        File indexHtml = new File(generator.getOutputDirectory(), "Class." + qualifiedName + ".html");
-        FileWriter fw = new FileWriter(indexHtml);
-        
-        Template template = Velocity.getTemplate("/nextapp/coredoc/htmlrender/template/Class.html");        
-        VelocityContext context = new VelocityContext();
-
-        context.put("generator", generator);
-        context.put("qualifiedName", qualifiedName);
-        context.put("name", classBlock.getName());
-        context.put("cr", this);
-        context.put("containerName", classBlock.getContainerName());
-        context.put("description", docComment == null ? null : docComment.getDescription());;
-        if ((classBlock.getModifiers() & Modifiers.ABSTRACT) != 0) {
-            context.put("modifiers", "Abstract");
-        }
-
-        template.merge(context, fw);
-        fw.flush();
-        fw.close();
     }
 }

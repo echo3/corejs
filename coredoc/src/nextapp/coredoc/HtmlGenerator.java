@@ -5,9 +5,9 @@ import java.io.File;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
-import nextapp.coredoc.htmlrender.CustomTagRender;
-import nextapp.coredoc.htmlrender.HtmlRenderer;
 import nextapp.coredoc.model.Instance;
+import nextapp.coredoc.render.CustomTagRender;
+import nextapp.coredoc.render.html.HtmlRenderer;
 import nextapp.coredoc.util.DomUtil;
 
 public class HtmlGenerator {
@@ -30,7 +30,6 @@ public class HtmlGenerator {
     public void generate() 
     throws Exception {
         HtmlRenderer htmlRenderer = new HtmlRenderer(instance);
-        
         htmlRenderer.setTitle(DomUtil.getPropertyElementValue(document.getDocumentElement(), "title"));
         
         Element customTagElements[] = DomUtil.getChildElementsByTagName(document.getDocumentElement(), "custom-tag");
@@ -47,7 +46,7 @@ public class HtmlGenerator {
                     DomUtil.getPropertyElementValue(customTypeElements[i], "display"));
         }
         
-        htmlRenderer.generate(outputDir);
+        htmlRenderer.render(outputDir);
     }
     
     public String getOutputDir() {

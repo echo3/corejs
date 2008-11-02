@@ -1,4 +1,4 @@
-package nextapp.coredoc.htmlrender;
+package nextapp.coredoc.render.html;
 
 public class NameUrlDO 
 implements Comparable {

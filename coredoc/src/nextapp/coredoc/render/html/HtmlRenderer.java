@@ -1,11 +1,9 @@
-package nextapp.coredoc.htmlrender;
+package nextapp.coredoc.render.html;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -16,70 +14,76 @@ import org.apache.velocity.app.Velocity;
 
 import nextapp.coredoc.model.ClassBlock;
 import nextapp.coredoc.model.Instance;
+import nextapp.coredoc.model.Modifiers;
 import nextapp.coredoc.model.Node;
+import nextapp.coredoc.render.ClassDO;
+import nextapp.coredoc.render.Renderer;
 import nextapp.coredoc.util.Resource;
 
-public class HtmlRenderer {
+public class HtmlRenderer 
+extends Renderer {
+    
+    private static final String TEMPLATE_PATH = "nextapp/coredoc/render/html/template/";
+    private static final String RESOURCE_PATH = "nextapp/coredoc/render/html/resource/";
     
     private Map typeToUrlMap = new HashMap();
-    private Instance instance;
-    private File outputDirectory;
-    private Map classBlockToClassRender = new HashMap();
-    private Map customTagNameToTagRender = new HashMap();
-    private Map customTypeToDisplayText = new HashMap();
     private String title = "Generated Documentation";
     
     public HtmlRenderer(Instance instance) {
-        this.instance = instance;
+        super(instance);
     }
     
-    public void addCustomTag(CustomTagRender customTag) {
-        customTagNameToTagRender.put(customTag.getTagName(), customTag);
-        customTag.setGenerator(this);
-    }
-    
-    public void addCustomType(String typeName, String displayText) {
-        customTypeToDisplayText.put(typeName, displayText);
-    }
-    
-    public String getCustomType(String typeName) {
-        return (String) customTypeToDisplayText.get(typeName);
-    }
-    
-    public void generate(String outputPath) 
+    public void render(String outputPath) 
     throws Exception {
-        ClassBlock[] classes = instance.getClasses();
+        super.render(outputPath);
+        
+        ClassBlock[] classes = getInstance().getClasses();
         for (int i = 0; i < classes.length; ++i) {
             String qualifiedName = classes[i].getQualifiedName();
             typeToUrlMap.put(qualifiedName, "Class." + qualifiedName + ".html");
         }
         
-        // Create output directory. 
-        outputDirectory = new File(outputPath);
-        if (outputDirectory.exists() && (!outputDirectory.isDirectory() || !outputDirectory.canWrite())) {
-            throw new IllegalArgumentException("Output path exists and is not writable.");
-        }
-        if (!outputDirectory.exists()) {
-            outputDirectory.mkdir();
-        }
-
         createCss();
         createFrameSet();
     }
     
+    private void createClass(ClassBlock classBlock, ClassDO classDO)
+    throws Exception {
+
+        File indexHtml = new File(getOutputDirectory(), "Class." + classBlock.getQualifiedName() + ".html");
+        FileWriter fw = new FileWriter(indexHtml);
+        
+        Template template = Velocity.getTemplate(TEMPLATE_PATH + "Class.html");        
+        VelocityContext context = new VelocityContext();
+
+        context.put("generator", this);
+        context.put("qualifiedName", classBlock.getQualifiedName());
+        context.put("name", classBlock.getName());
+        context.put("cr", classDO);
+        context.put("containerName", classBlock.getContainerName());
+        context.put("description", classBlock.getDocComment() == null ? null : classBlock.getDocComment().getDescription());;
+        if ((classBlock.getModifiers() & Modifiers.ABSTRACT) != 0) {
+            context.put("modifiers", "Abstract");
+        }
+
+        template.merge(context, fw);
+        fw.flush();
+        fw.close();
+    }
+    
     private void createAllClasses() 
     throws Exception {
-        ClassBlock[] classes = instance.getClasses();
+        ClassBlock[] classes = getInstance().getClasses();
         NameUrlDO[] classDOs = new NameUrlDO[classes.length];
         for (int i = 0; i < classDOs.length; ++i) {
             classDOs[i] = new NameUrlDO(classes[i].getQualifiedName(), 
                     "Class." + classes[i].getQualifiedName() + ".html");
         }
 
-        File indexHtml = new File(outputDirectory, "classes.html");
+        File indexHtml = new File(getOutputDirectory(), "classes.html");
         FileWriter fw = new FileWriter(indexHtml);
         
-        Template template = Velocity.getTemplate("/nextapp/coredoc/htmlrender/template/Classes.html");        
+        Template template = Velocity.getTemplate(TEMPLATE_PATH + "Classes.html");        
 
         VelocityContext context = new VelocityContext();
         context.put("classes", classDOs);
@@ -89,17 +93,17 @@ public class HtmlRenderer {
         fw.close();
         
         for (int i = 0; i < classes.length; ++i) {
-            ClassRender cr = getClassRender(classes[i]);
-            cr.render();
+            ClassDO classDO = getClassRender(classes[i]);
+            createClass(classes[i], classDO);
         }
     }
 
     private void createCss() 
     throws IOException {
-        File defaultCss = new File(outputDirectory, "default.css");
+        File defaultCss = new File(getOutputDirectory(), "default.css");
         FileWriter fw = new FileWriter(defaultCss);
         
-        fw.write(Resource.getResourceAsString("nextapp/coredoc/htmlrender/resource/Default.css"));
+        fw.write(Resource.getResourceAsString(RESOURCE_PATH + "Default.css"));
         
         fw.flush();
         fw.close();
@@ -107,10 +111,10 @@ public class HtmlRenderer {
     
     private void createFrameSet() 
     throws Exception {
-        File indexHtml = new File(outputDirectory, "index.html");
+        File indexHtml = new File(getOutputDirectory(), "index.html");
         FileWriter fw = new FileWriter(indexHtml);
         
-        Template template = Velocity.getTemplate("/nextapp/coredoc/htmlrender/template/Index.html");        
+        Template template = Velocity.getTemplate(TEMPLATE_PATH + "Index.html");        
         VelocityContext context = new VelocityContext();
         context.put("framesetTitle", title);
         
@@ -125,7 +129,7 @@ public class HtmlRenderer {
     
     private void createNamespaces() 
     throws Exception {
-        Node[] namespaces = instance.getNamespaces();
+        Node[] namespaces = getInstance().getNamespaces();
         Set namespaceDOs = new TreeSet();
         for (int i = 0; i < namespaces.length; ++i) {
             if (namespaces[i] instanceof ClassBlock) {
@@ -140,13 +144,13 @@ public class HtmlRenderer {
             }
         }
 
-        File indexHtml = new File(outputDirectory, "namespaces.html");
+        File indexHtml = new File(getOutputDirectory(), "namespaces.html");
         FileWriter fw = new FileWriter(indexHtml);
         
         VelocityContext context = new VelocityContext();
         context.put("namespaces", namespaceDOs);
         
-        Template template = Velocity.getTemplate("/nextapp/coredoc/htmlrender/template/Namespaces.html");        
+        Template template = Velocity.getTemplate(TEMPLATE_PATH + "Namespaces.html");        
         template.merge(context, fw);
 
         fw.flush();
@@ -164,10 +168,10 @@ public class HtmlRenderer {
                     "Class." + classBlock.getQualifiedName() + ".html"));
         }
 
-        File indexHtml = new File(outputDirectory, "Namespace." + parent.getQualifiedName() + ".html");
+        File indexHtml = new File(getOutputDirectory(), "Namespace." + parent.getQualifiedName() + ".html");
         FileWriter fw = new FileWriter(indexHtml);
         
-        Template template = Velocity.getTemplate("/nextapp/coredoc/htmlrender/template/NamespaceClasses.html");        
+        Template template = Velocity.getTemplate(TEMPLATE_PATH + "NamespaceClasses.html");        
 
         VelocityContext context = new VelocityContext();
         context.put("namespace", parent.getQualifiedName());
@@ -178,47 +182,22 @@ public class HtmlRenderer {
         fw.close();
         
         for (int i = 0; i < classes.length; ++i) {
-            getClassRender(classes[i]).render();
+            createClass(classes[i], getClassRender(classes[i]));
         }
     }
     
     private void createOverview() 
     throws Exception {
-        File indexHtml = new File(outputDirectory, "overview.html");
+        File indexHtml = new File(getOutputDirectory(), "overview.html");
         FileWriter fw = new FileWriter(indexHtml);
         
-        Template template = Velocity.getTemplate("/nextapp/coredoc/htmlrender/template/Overview.html");        
+        Template template = Velocity.getTemplate(TEMPLATE_PATH + "Overview.html");        
         VelocityContext context = new VelocityContext();
         context.put("title", title);
         
         template.merge(context, fw);
         fw.flush();
         fw.close();
-    }
-    
-    public ClassRender getClassRender(ClassBlock classBlock) {
-        ClassRender classRender = (ClassRender) classBlockToClassRender.get(classBlock);
-        if (classRender == null) {
-            classRender = new ClassRender(this, classBlock);
-            classBlockToClassRender.put(classBlock, classRender);
-        }
-        return classRender;
-    }
-    
-    public Instance getInstance() {
-        return instance;
-    }
-    
-    public File getOutputDirectory() {
-        return outputDirectory;
-    }
-    
-    public CustomTagRender getTagRender(String tagName) {
-        return (CustomTagRender) customTagNameToTagRender.get(tagName);
-    }
-   
-    public Iterator getTagRenderNames() {
-        return Collections.unmodifiableSet(customTagNameToTagRender.keySet()).iterator();
     }
     
     public String getTypeUrl(String type) {
