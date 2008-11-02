@@ -31,10 +31,15 @@ public class Generator {
         
         Element customTagElements[] = DomUtil.getChildElementsByTagName(document.getDocumentElement(), "custom-tag");
         for (int i = 0; i < customTagElements.length; ++i) {
-            CustomTagRender customTag = new CustomTagRender(DomUtil.getPropertyElementValue(customTagElements[i], "name"),
-                    DomUtil.getPropertyElementValue(customTagElements[i], "template"));
-            customTag.setRequiredType(DomUtil.getPropertyElementValue(customTagElements[i], "required-type"));
-            renderer.addCustomTag(customTag);
+            Element[] templateElements = DomUtil.getChildElementsByTagName(customTagElements[i], "template");
+            for (int j = 0; j < templateElements.length; ++j) {
+                if (renderer.getName().equals(templateElements[j].getAttribute("type"))) {
+                    CustomTagRender customTag = new CustomTagRender(DomUtil.getPropertyElementValue(customTagElements[i], "name"),
+                            DomUtil.getElementText(templateElements[j]));
+                    customTag.setRequiredType(DomUtil.getPropertyElementValue(customTagElements[i], "required-type"));
+                    renderer.addCustomTag(customTag);
+                }
+            }
         }
 
         Element customTypeElements[] = DomUtil.getChildElementsByTagName(document.getDocumentElement(), "custom-type");

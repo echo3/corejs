@@ -25,6 +25,10 @@ public class XmlRenderer extends Renderer {
         
         createAllClasses();
     }
+    
+    public String getName() {
+        return "xml";
+    }
 
     private void createAllClasses() 
     throws Exception {

@@ -199,6 +199,10 @@ extends Renderer {
         fw.close();
     }
     
+    public String getName() {
+        return "html";
+    }
+    
     public String getTypeUrl(String type) {
         return (String) typeToUrlMap.get(type);
     }

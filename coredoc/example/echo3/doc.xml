@@ -48,51 +48,43 @@
   <module>Sync.TransitionPane.js</module>
   <module>Serial.Menu.js</module>
  </modules>
+ 
  <custom-type>
   <name>#Alignment</name>
   <display><![CDATA[Alignment (<code>String</code> or <code>Object</code>)]]></display>
  </custom-type>
-
  <custom-type>
   <name>#Border</name>
   <display><![CDATA[Border (<code>String</code> or <code>Object</code>)]]></display>
  </custom-type>
-
  <custom-type>
   <name>#Color</name>
   <display><![CDATA[Color (<code>String</code>)]]></display>
  </custom-type>
-
  <custom-type>
   <name>#Extent</name>
   <display><![CDATA[Extent (<code>Number</code> or <code>String</code>)]]></display>
  </custom-type>
-
  <custom-type>
   <name>#FillImage</name>
   <display><![CDATA[FillImage (<code>String</code> or <code>Object</code>)]]></display>
  </custom-type>
-
  <custom-type>
   <name>#FillImageBorder</name>
   <display><![CDATA[FillImageBorder (<code>Object</code>)]]></display>
  </custom-type>
-
  <custom-type>
   <name>#Font</name>
   <display><![CDATA[Font (<code>Object</code>)]]></display>
  </custom-type>
-
  <custom-type>
   <name>#ImageReference</name>
   <display><![CDATA[ImageReference (<code>String</code> or <code>Object</code>)]]></display>
  </custom-type>
-
  <custom-type>
   <name>#Insets</name>
   <display><![CDATA[Insets (<code>Number</code>, <code>String</code>, or <code>Object</code>)]]></display>
  </custom-type>
-
  <custom-type>
   <name>#Style</name>
   <display><![CDATA[Style (<code>Object</code>)]]></display>
@@ -101,28 +93,25 @@
  <custom-tag>
   <name>cp</name>
   <parser>property</parser>
-  <template>ComponentCPBlock.html</template>
+  <template type="html">ComponentCPBlock.html</template>
   <required-type>Echo.Component</required-type>
  </custom-tag>
-
  <custom-tag>
   <name>sp</name>
   <parser>property</parser>
-  <template>ComponentSPBlock.html</template>
+  <template type="html">ComponentSPBlock.html</template>
   <required-type>Echo.Component</required-type>
  </custom-tag>
-
  <custom-tag>
   <name>ldp</name>
   <parser>property</parser>
-  <template>ComponentLDPBlock.html</template>
+  <template type="html">ComponentLDPBlock.html</template>
   <required-type>Echo.Component</required-type>
  </custom-tag>
-
  <custom-tag>
   <name>event</name>
   <parser>property</parser>
-  <template>EventBlock.html</template>
+  <template type="html">EventBlock.html</template>
  </custom-tag>
 
 </coredoc>

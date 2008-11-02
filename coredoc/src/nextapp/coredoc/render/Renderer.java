@@ -21,7 +21,7 @@ public abstract class Renderer {
     public Renderer(Instance instance) {
         this.instance = instance;
     }
-
+    
     public void addCustomTag(CustomTagRender customTag) {
         customTagNameToTagRender.put(customTag.getTagName(), customTag);
         customTag.setRenderer(this);
@@ -51,6 +51,8 @@ public abstract class Renderer {
     public File getOutputDirectory() {
         return outputDirectory;
     }
+    
+    public abstract String getName();
     
     public CustomTagRender getTagRender(String tagName) {
         return (CustomTagRender) customTagNameToTagRender.get(tagName);
