@@ -13,6 +13,12 @@ public class DocCommentParser {
     private static final Pattern tagSplitter = Pattern.compile("(^|[\\r\\f\\n])\\s*(?=@)", Pattern.MULTILINE);
     private static final Pattern tagParser = Pattern.compile("(^@\\w*)", Pattern.MULTILINE);
     
+    /**
+     * Creates a <code>DocComment</code> object from raw text.
+     * 
+     * @param commentText the comment text (may include the leading slash-star-star and trailing star-slash)
+     * @return a <code>DocComment</code> representation of the comment
+     */
     public static DocComment parse(String commentText) {
         DocComment docComment = new DocComment();
 

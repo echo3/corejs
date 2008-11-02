@@ -27,7 +27,6 @@ extends Renderer {
     private static final String RESOURCE_PATH = "nextapp/coredoc/render/html/resource/";
     
     private Map typeToUrlMap = new HashMap();
-    private String title = "Generated Documentation";
     
     public HtmlRenderer(Instance instance) {
         super(instance);
@@ -116,7 +115,7 @@ extends Renderer {
         
         Template template = Velocity.getTemplate(TEMPLATE_PATH + "Index.html");        
         VelocityContext context = new VelocityContext();
-        context.put("framesetTitle", title);
+        context.put("framesetTitle", getTitle());
         
         template.merge(context, fw);
         fw.flush();
@@ -193,7 +192,7 @@ extends Renderer {
         
         Template template = Velocity.getTemplate(TEMPLATE_PATH + "Overview.html");        
         VelocityContext context = new VelocityContext();
-        context.put("title", title);
+        context.put("title", getTitle());
         
         template.merge(context, fw);
         fw.flush();
@@ -202,9 +201,5 @@ extends Renderer {
     
     public String getTypeUrl(String type) {
         return (String) typeToUrlMap.get(type);
-    }
-    
-    public void setTitle(String title) {
-        this.title = title;
     }
 }

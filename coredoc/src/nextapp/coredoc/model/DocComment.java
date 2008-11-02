@@ -9,6 +9,10 @@ import java.util.regex.Matcher;
 
 import nextapp.coredoc.util.Patterns;
 
+/**
+ * A representation of a "Doc Comment" which may contain tags to describe
+ * parameters, types, and return values.
+ */
 public class DocComment {
     
     public static String getParameterType(Tag tag) {

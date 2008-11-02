@@ -16,6 +16,7 @@ public abstract class Renderer {
     private Map classBlockToClassRender = new HashMap();
     private Map customTagNameToTagRender = new HashMap();
     private Map customTypeToDisplayText = new HashMap();
+    private String title = "Generated Documentation";
     
     public Renderer(Instance instance) {
         this.instance = instance;
@@ -59,6 +60,10 @@ public abstract class Renderer {
         return Collections.unmodifiableSet(customTagNameToTagRender.keySet()).iterator();
     }
     
+    public String getTitle() {
+        return title;
+    }
+    
     public void render(String outputPath) 
     throws Exception {
         // Create output directory. 
@@ -69,5 +74,9 @@ public abstract class Renderer {
         if (!outputDirectory.exists()) {
             outputDirectory.mkdir();
         }
+    }
+    
+    public void setTitle(String title) {
+        this.title = title;
     }
 }

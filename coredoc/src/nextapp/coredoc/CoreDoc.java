@@ -13,6 +13,9 @@ import nextapp.coredoc.model.Node;
 import nextapp.coredoc.util.DomUtil;
 import nextapp.coredoc.util.StringUtil;
 
+import nextapp.coredoc.render.html.HtmlRenderer;
+
+
 public class CoreDoc {
     
     public static void main(String[] args) 
@@ -45,10 +48,12 @@ public class CoreDoc {
         Processor processor = new Processor(document, defaultBaseFile);
         Instance instance = processor.process();
         
-        HtmlGenerator htmlGenerator = new HtmlGenerator(document, instance);
-        htmlGenerator.generate();
+        Generator generator = new Generator(document);
+        HtmlRenderer htmlRenderer = new HtmlRenderer(instance);    
+    
+        generator.generate(htmlRenderer);
         
-        System.err.println("Documentation successfully generated: " + htmlGenerator.getOutputDir());
+        System.err.println("Documentation successfully generated: " + generator.getOutputDir());
     }
 
     public static void print(Node block, int indent, StringBuffer out) {

@@ -8,5 +8,4 @@ public class FieldBlock extends Block {
 
     public void process() {
     }
-
 }

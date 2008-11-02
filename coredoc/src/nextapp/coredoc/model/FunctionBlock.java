@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * A representation of a function block.
+ */
 public class FunctionBlock extends Block {
     
     public class Parameter {
