@@ -1,0 +1,15 @@
+<coredoc-index>
+
+<namespaces>
+#foreach( $namespace in $namespaces )
+<namespace name="$namespace"/>
+#end
+</namespaces>
+
+<classes>
+#foreach( $class in $classes )
+<class name="$class.getQualifiedName()"/>
+#end
+</classes>
+
+</coredoc-index>

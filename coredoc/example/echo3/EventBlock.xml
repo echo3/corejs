@@ -1,0 +1,10 @@
+<custom-block name="Events">
+
+#foreach ($property in $tagRender.getPropertyNames($classBlock))
+<item>
+<name>$property.getName()</name>
+<description>$property.getDescription()</description>
+</item>
+#end
+
+</custom-block>

@@ -48,7 +48,6 @@ extends Renderer {
     
     private void createClass(ClassBlock classBlock, ClassDO classDO)
     throws Exception {
-
         File indexHtml = new File(getOutputDirectory(), "Class." + classBlock.getQualifiedName() + ".html");
         FileWriter fw = new FileWriter(indexHtml);
         
@@ -73,9 +72,9 @@ extends Renderer {
     private void createAllClasses() 
     throws Exception {
         ClassBlock[] classes = getInstance().getClasses();
-        NameUrlDO[] classDOs = new NameUrlDO[classes.length];
-        for (int i = 0; i < classDOs.length; ++i) {
-            classDOs[i] = new NameUrlDO(classes[i].getQualifiedName(), 
+        NameUrlDO[] nameUrlDOs = new NameUrlDO[classes.length];
+        for (int i = 0; i < nameUrlDOs.length; ++i) {
+            nameUrlDOs[i] = new NameUrlDO(classes[i].getQualifiedName(), 
                     "Class." + classes[i].getQualifiedName() + ".html");
         }
 
@@ -85,7 +84,7 @@ extends Renderer {
         Template template = Velocity.getTemplate(TEMPLATE_PATH + "Classes.html");        
 
         VelocityContext context = new VelocityContext();
-        context.put("classes", classDOs);
+        context.put("classes", nameUrlDOs);
         
         template.merge(context, fw);
         fw.flush();

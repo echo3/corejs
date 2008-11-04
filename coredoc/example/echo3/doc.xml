@@ -114,4 +114,28 @@
   <template type="html">EventBlock.html</template>
  </custom-tag>
 
+ <custom-tag>
+  <name>cp</name>
+  <parser>property</parser>
+  <template type="xml">ComponentCPBlock.xml</template>
+  <required-type>Echo.Component</required-type>
+ </custom-tag>
+ <custom-tag>
+  <name>sp</name>
+  <parser>property</parser>
+  <template type="xml">ComponentSPBlock.xml</template>
+  <required-type>Echo.Component</required-type>
+ </custom-tag>
+ <custom-tag>
+  <name>ldp</name>
+  <parser>property</parser>
+  <template type="xml">ComponentLDPBlock.xml</template>
+  <required-type>Echo.Component</required-type>
+ </custom-tag>
+ <custom-tag>
+  <name>event</name>
+  <parser>property</parser>
+  <template type="xml">EventBlock.xml</template>
+ </custom-tag>
+
 </coredoc>

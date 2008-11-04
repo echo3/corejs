@@ -13,7 +13,9 @@ import nextapp.coredoc.model.Node;
 import nextapp.coredoc.util.DomUtil;
 import nextapp.coredoc.util.StringUtil;
 
+import nextapp.coredoc.render.Renderer;
 import nextapp.coredoc.render.html.HtmlRenderer;
+import nextapp.coredoc.render.xml.XmlRenderer;
 
 
 public class CoreDoc {
@@ -49,9 +51,18 @@ public class CoreDoc {
         Instance instance = processor.process();
         
         Generator generator = new Generator(document);
-        HtmlRenderer htmlRenderer = new HtmlRenderer(instance);    
-    
-        generator.generate(htmlRenderer);
+
+        Renderer renderer;
+        String renderArg = System.getProperty("render");
+        if ("xml".equals(renderArg)) {
+            System.err.println("Initializing Renderer: XML");
+            renderer = new XmlRenderer(instance);    
+        } else {
+            System.err.println("Initializing Renderer: HTML");
+            renderer = new HtmlRenderer(instance);    
+        }
+
+        generator.generate(renderer);
         
         System.err.println("Documentation successfully generated: " + generator.getOutputDir());
     }
