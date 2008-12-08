@@ -1182,7 +1182,7 @@ Core.Web.Image = {
             
             if (this._queuedRunnable && this._count === 0) {
                 Core.Web.Scheduler.remove(this._queuedRunnable);
-                this._queuedRunnable = null
+                this._queuedRunnable = null;
             }
             
             if (!this._queuedRunnable) {
@@ -1206,7 +1206,7 @@ Core.Web.Image = {
      *        be invoked immediately once all images have loaded)
      */
     monitor: function(element, l, interval) {
-        new Core.Web.Image._Monitor(element, l, interval);
+        var monitor = new Core.Web.Image._Monitor(element, l, interval);
     }
 };
 
