@@ -577,6 +577,12 @@ Core.Arrays = {
 Core.Arrays.LargeMap = Core.extend({
     
     $static: {
+    
+        /** 
+         * Flag indicating whether forced garbage collection should be enabled.
+         * This flag should be manually set in environments where it is required.
+         * (The web module does this automatically for IE6.)
+         */
         garbageCollectEnabled: false
     },
     
