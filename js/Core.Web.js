@@ -60,7 +60,6 @@ Core.Web = {
      * Internet Explorer-specific event listener to deny selection.
      * 
      * @param {Event} e the selection event
-     * @private
      */
     _selectStartListener: function(e) {
         e = e ? e : window.event;
@@ -161,7 +160,6 @@ Core.Web.DOM = {
      * Focus element implementation.
      * 
      * @param {Element} element the DOM element to focus
-     * @private
      */
     _focusElementImpl: function(element) {
         if (!element) {
@@ -564,7 +562,6 @@ Core.Web.Env = {
      * after the dot, or the end of the ua string (whichever comes first).
      * If the ua string does not supply a minor version, the minor version is assumed to be 0.
      *
-     * @private
      * @param ua the lower cased user agent string
      * @param searchString the text that prefixes the version info (version info must be the first appearance of 
      *          this text in the ua string)
@@ -648,7 +645,6 @@ Core.Web.Event = {
          * Selection denial listener implementation.
          * 
          * @param e the selection/click event
-         * @private
          */
         _disposeEvent: function(e) {
             Core.Web.DOM.preventEventDefault(e);
@@ -878,7 +874,6 @@ Core.Web.Event = {
      * @param {Element} element the element
      * @param {Core.Arrays.LargeMap} listenerMap the map from which the listeners should be removed, either
      *        Core.Web.Event._capturingListenerMap or Core.Web.Event._bubblingListenerMap
-     * @private
      */
     _removeAllImpl: function(element, listenerMap) {
         var listenerList = listenerMap.map[element.__eventProcessorId];
@@ -1218,7 +1213,6 @@ Core.Web.Library = {
 
     /**
      * Set of loaded libraries (keys are library urls, value is true when library has been loaded).
-     * @private
      */
     _loadedLibraries: { },
     
@@ -1275,8 +1269,6 @@ Core.Web.Library = {
         
         /**
          * Notifies listeners of completed library loading.
-         * 
-         * @private
          */
         _fireLoadEvent: function() {
             this._listenerList.fireEvent({type: "load", source: this});
@@ -1298,8 +1290,6 @@ Core.Web.Library = {
          * This method is invoked once all libraries have been successfully
          * retrieved.  It will invoke any registered load listeners
          * once the libraries have been installed.
-         * 
-         * @private
          */
         _install: function() {
             for (var i = 0; i < this._libraries.length; ++i) {
@@ -1315,7 +1305,6 @@ Core.Web.Library = {
         /**
          * Event listener invoked when a single library has been successfully retrieved.
          * When all libraries have been retrieved, this method will invoke _install().
-         * @private
          */
         _notifyRetrieved: function() {
             ++this._loadedCount;
@@ -1375,7 +1364,6 @@ Core.Web.Library = {
          * Event listener for response from the HttpConnection used to retrieve the library.
          * 
          * @param e the event
-         * @private
          */
         _retrieveListener: function(e) {
             if (!e.valid) {
@@ -1388,7 +1376,6 @@ Core.Web.Library = {
         /**
          * Installs the library.
          * The library must have been loaded before invoking this method.
-         * @private
          */
         _install: function() {
             if (Core.Web.Library._loadedLibraries[this._url]) {
@@ -1518,7 +1505,6 @@ Core.Web.Measure = {
      * Updates internal measures used in converting length units 
      * (e.g., in, mm, ex, and em) to pixels.
      * Automatically invoked when Core.Web module is initialized.
-     * @private
      */
     _calculateExtentSizes: function() {
         var containerElement = document.getElementsByTagName("body")[0];
@@ -1567,7 +1553,6 @@ Core.Web.Measure = {
      * @param element the element to measure
      * @return the offset data, with 'left' and 'top' properties specifying the offset amounts
      * @type Object
-     * @private
      */
     _getScrollOffset: function(element) {
         var valueT = 0, valueL = 0;
@@ -1587,7 +1572,6 @@ Core.Web.Measure = {
      * @param element the element to measure
      * @return the offset data, with 'left' and 'top' properties specifying the offset amounts
      * @type Object
-     * @private
      */
     _getCumulativeOffset: function(element) {
         var valueT = 0, 
@@ -1759,7 +1743,6 @@ Core.Web.Scheduler = {
     
     /**
      * Collection of runnables to execute.
-     * @private
      */
     _runnables: [],
     
@@ -1883,7 +1866,6 @@ Core.Web.Scheduler = {
     /**
      * Starts the scheduler "thread", to execute at the specified time.
      * If the specified time is in the past, it will execute with a delay of 0.
-     * @private
      */
     _setTimeout: function(nextExecution) {
         if (Core.Web.Scheduler._threadHandle != null && Core.Web.Scheduler._nextExecution < nextExecution) {
