@@ -909,20 +909,28 @@ Core.Web.Event = {
  */
 Core.Web.HttpConnection = Core.extend({
 
+    /** The URL. */
     _url: null,
     
+    /** The request content type. */
     _contentType: null,
     
+    /** The request method. */
     _method: null,
     
+    /** The message content object. */
     _messageObject: null,
     
+    /** Listener storage facility. */
     _listenerList: null,
     
+    /** Disposed state. */
     _disposed: false,
     
+    /** Browser XMLHttpRequest object. */
     _xmlHttpRequest: null,
     
+    /** Request header value map. */
     _requestHeaders: null,
 
     /**
@@ -948,6 +956,14 @@ Core.Web.HttpConnection = Core.extend({
         this._listenerList = new Core.ListenerList();
     },
     
+    /**
+     * Preprocesses outgoing requests to Safari (invoked when appropriate quirk is detected).
+     * All less than, greater than, and ampersands are replaced with escaped values, as this browser
+     * is broken in this regard and will otherwise fail.  Recursively invoked on nodes, starting with
+     * document element.
+     * 
+     * @param {Node} node the node to process
+     */
     _preprocessSafariDOM: function(node) {
         if (node.nodeType == 3) {
             var value = node.data;
@@ -1147,12 +1163,28 @@ Core.Web.Image = {
      */
     _Monitor: Core.extend({
 
+        /** Reference to _processImageLoad method. */
         _processImageLoadRef: null,
+        
+        /** Currently enqueued runnable. */
         _queuedRunnable: null,
+        
+        /** Listener to notify of successful image loadings. */
         _listener: null,
+        
+        /** Minimum Listener callback interval. */
         _interval: null,
+        
+        /** The number of images to be loaded. */
         _count: 0,
         
+        /**
+         * Creates a new image monitor.
+         * 
+         * @param {Element} element the root element which may (or may not) contain IMG elements
+         * @param {Function} listener the method to invoke when images are loaded
+         * @param {Number} interval the minimum time interval at which to notify the listener of successfully loaded images
+         */
         $construct: function(element, listener, interval) {
             this._listener = listener;
             this._interval = interval || 2000;
@@ -1168,7 +1200,9 @@ Core.Web.Image = {
         },
         
         /**
-         * Process an image loading event. 
+         * Process an image loading event.
+         * 
+         * @param e the event object
          */
         _processImageLoad: function(e) {
             e = e ? e : window.event;
@@ -1195,10 +1229,10 @@ Core.Web.Image = {
      * zero or more times as the images load.  If all images are already loaded (e.g., they were cached) or have specified 
      * sizes, the listener may never be invoked.  If the images take some time to load, the listener may be invoked multiple times.
      * 
-     * @param element the root element which may (or may not) contain IMG elements
-     * @param l the method to invoke when images are loaded.
-     * @param interval the maximum time interval at which the listener should be invoked (default value is 50ms, the listener will
-     *        be invoked immediately once all images have loaded)
+     * @param {Element} element the root element which may (or may not) contain IMG elements
+     * @param {Function} l the method to invoke when images are loaded.
+     * @param {Number} interval the maximum time interval at which the listener should be invoked (default value is 50ms, 
+     *        the listener will be invoked immediately once all images have loaded)
      */
     monitor: function(element, l, interval) {
         var monitor = new Core.Web.Image._Monitor(element, l, interval);
@@ -1225,12 +1259,19 @@ Core.Web.Library = {
      */
     Group: Core.extend({
     
+        /** Listener storage. */
         _listenerList: null,
         
+        /**
+         * Array of libraries to be loaded.
+         * @type Array
+         */
         _libraries: null,
         
+        /** Number of libraries which have been loaded. */
         _loadedCount: 0,
         
+        /** Number of libraries to load. */
         _totalCount: 0,
     
         /**
@@ -1246,7 +1287,7 @@ Core.Web.Library = {
          * Adds a library to the library group.
          * Libraries which have previously been loaded will not be loaded again.
          *
-         * @param libraryUrl the URL from which to retrieve the library.
+         * @param {String} libraryUrl the URL from which to retrieve the library.
          */
         add: function(libraryUrl) {
             if (Core.Web.Library._loadedLibraries[libraryUrl]) {
@@ -1342,10 +1383,16 @@ Core.Web.Library = {
      */    
     _Item: Core.extend({
     
+        /** URL Of library to load. */
         _url: null,
         
+        /** Containing library group. */
         _group: null,
         
+        /** 
+         * Loaded library content (set when retrieved). 
+         * @type String
+         */
         _content: null,
     
         /**
@@ -1866,6 +1913,8 @@ Core.Web.Scheduler = {
     /**
      * Starts the scheduler "thread", to execute at the specified time.
      * If the specified time is in the past, it will execute with a delay of 0.
+     * 
+     * @param {Number} nextExecution next execution time (milliseconds since epoch)
      */
     _setTimeout: function(nextExecution) {
         if (Core.Web.Scheduler._threadHandle != null && Core.Web.Scheduler._nextExecution < nextExecution) {
@@ -1884,6 +1933,12 @@ Core.Web.Scheduler = {
         Core.Web.Scheduler._threadHandle = window.setTimeout(Core.Web.Scheduler._execute, timeout);
     },
     
+    /**
+     * Updates a previously added runnable to be executed based on its <code>timeInterval</code> setting.
+     * Performs no action if specified runnable is not currently enqueued.
+     * 
+     * @param {Core.Web.Scheduler.Runnable} runnable the runnable to update
+     */
     update: function(runnable) {
         if (Core.Arrays.indexOf(Core.Web.Scheduler._runnables, runnable) == -1) {
             return;
@@ -1900,6 +1955,7 @@ Core.Web.Scheduler = {
  */
 Core.Web.Scheduler.Runnable = Core.extend({
     
+    /** Next execution time (milliseconds since epoch) */
     _nextExecution: null,
     
     $virtual: {
@@ -1919,6 +1975,7 @@ Core.Web.Scheduler.Runnable = Core.extend({
 
     $abstract: {
         
+        /** Performs work, provided by derived object. */
         run: function() { }
     }
 });
@@ -1928,6 +1985,10 @@ Core.Web.Scheduler.Runnable = Core.extend({
  */
 Core.Web.Scheduler.MethodRunnable = Core.extend(Core.Web.Scheduler.Runnable, {
 
+    /**
+     * The function to invoke.
+     * @type Function
+     */
     f: null,
 
     /**
@@ -1975,8 +2036,10 @@ Core.Web.Scheduler.MethodRunnable = Core.extend(Core.Web.Scheduler.Runnable, {
  */
 Core.Web.VirtualPosition = {
 
+    /** Array containing vertical offset attributes to be added to calculation. */ 
     _OFFSETS_VERTICAL: ["paddingTop", "paddingBottom", "marginTop", "marginBottom", "borderTopWidth", "borderBottomWidth"],
             
+    /** Array containing horizontal offset attributes to be added to calculation. */ 
     _OFFSETS_HORIZONTAL: ["paddingLeft", "paddingRight", "marginLeft", "marginRight", "borderLeftWidth", "borderRightWidth"],
     
     /** Flag indicating whether virtual positioning is required/enabled. */
