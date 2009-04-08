@@ -615,6 +615,14 @@ Core.Web.Env = {
      * @type Boolean
      */
     QUIRK_IE_SELECT_Z_INDEX: null,
+    
+    /**
+     * Flag indicating an IE browser that incorrectly displays the security warning,
+     * "This page contains both secure and nonsecure items. Do you want to display the nonsecure items?".
+     * See http://support.microsoft.com/kb/925014
+     * @type Boolean
+     */
+    QUIRK_IE_SECURE_ITEMS: null,
 
     /**
      * Flag indicating that IE browser does not properly render tables whose
@@ -768,6 +776,7 @@ Core.Web.Env = {
         if (this.BROWSER_INTERNET_EXPLORER) {
             // Internet Explorer Flags (all versions).
             this.CSS_FLOAT = "styleFloat";
+            this.QUIRK_IE_SECURE_ITEMS = true;
             this.PROPRIETARY_EVENT_MOUSE_ENTER_LEAVE_SUPPORTED = true;
             this.PROPRIETARY_EVENT_SELECT_START_SUPPORTED = true;
             this.QUIRK_IE_KEY_DOWN_EVENT_REPEAT = true;
@@ -2019,10 +2028,10 @@ Core.Web.Measure = {
                 
                 if (constraints) {
                     if (constraints.width) {
-                        Core.Web.Measure._offscreenDiv.width = constraints.width;
+                        Core.Web.Measure.Bounds._offscreenDiv.width = constraints.width;
                     }
                     if (constraints.height) {
-                        Core.Web.Measure._offscreenDiv.height = constraints.height;
+                        Core.Web.Measure.Bounds._offscreenDiv.height = constraints.height;
                     }
                 }
                 
@@ -2030,8 +2039,8 @@ Core.Web.Measure = {
                 Core.Web.Measure.Bounds._offscreenDiv.appendChild(element);
                 
                 if (constraints) {
-                    Core.Web.Measure._offscreenDiv.width = "1600px";
-                    Core.Web.Measure._offscreenDiv.height = "1200px";
+                    Core.Web.Measure.Bounds._offscreenDiv.width = "1600px";
+                    Core.Web.Measure.Bounds._offscreenDiv.height = "1200px";
                 }
             }
             
