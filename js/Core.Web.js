@@ -35,7 +35,7 @@ Core.Web = {
     /**
      * Initializes the Web Core.  This method must be executed prior to using any Web Core capabilities.
      */
-    init: function() { 
+    init: function() {
         if (Core.Web.initialized) {
             // Already initialized.
             return;
@@ -1685,13 +1685,6 @@ Core.Web.Library = {
         },
         
         /**
-         * Notifies listeners of completed library loading.
-         */
-        _fireLoadEvent: function() {
-            this._listenerList.fireEvent({type: "load", source: this});
-        },
-        
-        /**
          * Determines if this library group contains any new (not previously loaded)
          * libraries.
          * 
@@ -1713,10 +1706,21 @@ Core.Web.Library = {
                 try {
                     this._libraries[i]._install();
                 } catch (ex) {
-                    throw new Error("Exception installing library \"" + this._libraries[i]._url + "\"; " + ex);
+                    var e = {
+                        type: "load", 
+                        source: this, 
+                        success: false, 
+                        ex: ex, 
+                        url: this._libraries[i]._url,
+                        cancel: false
+                    };
+                    this._listenerList.fireEvent(e);
+                    if (!e.cancel) {
+                        throw new Error("Exception installing library \"" + this._libraries[i]._url + "\"; " + ex);
+                    }
                 }
             }
-            this._fireLoadEvent();
+            this._listenerList.fireEvent({type: "load", source: this, success: true});
         },
         
         /**
