@@ -524,6 +524,19 @@ Core.Web.Env = {
      * @type Boolean
      */
     NOT_SUPPORTED_RELATIVE_COLUMN_WIDTHS: null,
+    
+    /**
+     * Flag indicating that selectionStart/selectionEnd/setSelectionRange() are not
+     * supported on text field INPUT elements and TEXTAREA elements.
+     * @type Boolean
+     */
+    NOT_SUPPORTED_INPUT_SELECTION: null,
+    
+    /**
+     * Flag indicating complete lack of support for W3C DOM range API. 
+     * @type Boolean
+     */
+    NOT_SUPPORTED_RANGE: null,
 
     /**
      * Flag indicating support for "mouseenter" and "mouseleave" events. This is
@@ -553,6 +566,12 @@ Core.Web.Env = {
      * @type Boolean
      */
     PROPRIETARY_IE_PNG_ALPHA_FILTER_REQUIRED: null,
+    
+    /**
+     * Flag indicating support for the IE text range API.
+     * @type Boolean
+     */
+    PROPRIETARY_IE_RANGE: null,
     
     /**
      * Flag indicating that keypress events will place charCode value in keyCode property.
@@ -805,6 +824,9 @@ Core.Web.Env = {
             this.CSS_FLOAT = "styleFloat";
             this.QUIRK_KEY_CODE_IS_CHAR_CODE = true;
             this.QUIRK_IE_SECURE_ITEMS = true;
+            this.NOT_SUPPORTED_RANGE = true;
+            this.NOT_SUPPORTED_INPUT_SELECTION = true;
+            this.PROPRIETARY_IE_RANGE = true;
             this.PROPRIETARY_EVENT_MOUSE_ENTER_LEAVE_SUPPORTED = true;
             this.PROPRIETARY_EVENT_SELECT_START_SUPPORTED = true;
             this.QUIRK_IE_KEY_DOWN_EVENT_REPEAT = true;
@@ -946,9 +968,15 @@ Core.Web.Env = {
  * platforms, including Internet Explorer, even though Internet Explorer does
  * not inhererntly support such listeners. This is accomplished by the Event
  * system adding a layer of abstraction between event registration and the
- * browser, and then invoking event listeners itself. This implementation of
- * course relies on the fact that all event listeners will be registered through
- * it.
+ * browser, and then invoking event listeners itself.
+ * <p>
+ * This implementation relies on the fact that all event listeners will be 
+ * registered through it.  The implementation is in fact internally registering only
+ * bubbling-phase event listeners on the DOM.  Thus, if other event listeners are 
+ * registered directly on the DOM, scenarios may occur such as a direct-registered
+ * bubbling listener receiving an event before a Core.Web.Event-registered capturing
+ * listener.  This is not necessarily a critical issue, but the developer should
+ * be aware of it. 
  * 
  * @class
  */
